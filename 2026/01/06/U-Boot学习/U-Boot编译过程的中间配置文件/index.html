@@ -1,0 +1,961 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+
+
+<style>
+  /* 加载动画 - 内联关键样式，防止闪烁 */
+  #loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0ffff;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+  }
+  
+  /* 深色模式背景 */
+  [data-theme="dark"] #loading-screen {
+    background: #0d1117;
+  }
+  
+  /* 加载完成状态 */
+  #loading-screen.loaded {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  
+  /* 内容容器 */
+  .loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+  }
+  
+  /* 头像容器 - 固定尺寸 */
+  .loading-avatar {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    flex-shrink: 0;
+  }
+  
+  /* 头像图片 - 强制尺寸和样式 */
+  .loading-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    border: 2px solid rgba(73, 177, 245, 0.2);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* 深色模式头像 */
+  [data-theme="dark"] .loading-avatar img {
+    border-color: rgba(0, 132, 255, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+
+  /* 进度条样式 */
+.loading-progress {
+  width: 200px;
+  height: 4px;
+  background: var(--border-color);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-color), var(--primary-hover));
+  border-radius: 2px;
+  animation: progress-load 2s ease-in-out infinite;
+}
+
+@keyframes progress-load {
+  0% {
+    width: 0%;
+    margin-left: 0;
+  }
+  50% {
+    width: 80%;
+    margin-left: 0;
+  }
+  100% {
+    width: 80%;
+    margin-left: 100%;
+  }
+}
+  
+  /* 加载文字 */
+  .loading-text {
+    color: #999;
+    font-size: 0.85rem;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    animation: loading-fade 1.5s ease-in-out infinite;
+  }
+  
+  /* 深色模式文字 */
+  [data-theme="dark"] .loading-text {
+    color: #707070;
+  }
+  
+  /* 文字淡入淡出 */
+  @keyframes loading-fade {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+  
+  /* 页面内容初始隐藏 */
+  #app {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  /* 加载完成后显示 */
+  body.page-loaded #app {
+    opacity: 1;
+  }
+</style>
+
+
+
+<title>U-Boot编译过程的中间配置文件 | STUDYWITHIOT</title>
+<meta name="description" content="STUDYWITHIOT的博客">
+<meta name="keywords" content="U-Boot">
+<meta name="author" content="STUDYWITHIOT">
+
+
+<meta name="theme-color" content="#49b1f5" id="theme-color-meta">
+
+<!-- Favicon -->
+<link rel="icon" href="/images/avatar.png">
+
+
+<link rel="stylesheet" href="/css/fontawesome/all.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<link rel="stylesheet" href="/css/prism/prism.css">
+
+
+
+
+<link rel="stylesheet" href="/css/post-verify.css">
+
+
+
+
+<script>
+(function() {
+  var savedTheme = localStorage.getItem('theme');
+  var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var defaultTheme = 'light';
+  var autoChange = true;
+  var lightTime = 7;
+  var darkTime = 19;
+  
+  var theme = savedTheme;
+  
+  if (!theme) {
+    if (autoChange) {
+      var hour = new Date().getHours();
+      theme = (hour >= darkTime || hour < lightTime) ? 'dark' : 'light';
+    } else {
+      theme = prefersDark ? 'dark' : defaultTheme;
+    }
+  }
+  
+  document.documentElement.setAttribute('data-theme', theme);
+  
+  // 更新 theme-color meta
+  var metaThemeColor = document.getElementById('theme-color-meta');
+  if (metaThemeColor) {
+    metaThemeColor.content = theme === 'dark' ? '#1a1a2e' : '#49b1f5';
+  }
+})();
+</script>
+
+
+
+<style>
+  :root {
+    --sidebar-width: 300px;
+  }
+</style>
+<meta name="generator" content="Hexo 7.3.0"></head>
+<body class="">
+
+  
+  
+  <div id="loading-screen" class="loading-screen">
+    <div class="loading-content">
+      
+      <div class="loading-avatar">
+        <img src="/images/avatar.png" 
+             alt="Loading..."
+             onerror="this.style.display='none'">
+      </div>
+      
+      
+    <div class="loading-progress">
+      <div class="progress-bar"></div>
+    </div>
+      
+      
+      
+      <p class="loading-text">加载中...</p>
+      
+    </div>
+  </div>
+  
+
+  
+  <div id="app">
+    
+    
+<header id="header" class="header">
+  <div class="header-inner">
+    
+    <div class="header-logo">
+      <a href="/" class="site-name">
+        STUDYWITHIOT
+      </a>
+    </div>
+    
+    
+    <div class="header-right">
+      <nav class="header-nav">
+        <ul class="nav-list">
+          
+          <li class="nav-item">
+            <a href="/" class="nav-link">
+              首页
+            </a>
+          </li>
+          
+          <li class="nav-item">
+            <a href="/archives" class="nav-link">
+              归档
+            </a>
+          </li>
+          
+          <li class="nav-item">
+            <a href="/categories" class="nav-link">
+              分类
+            </a>
+          </li>
+          
+          <li class="nav-item">
+            <a href="/tags" class="nav-link">
+              标签
+            </a>
+          </li>
+          
+          <li class="nav-item">
+            <a href="/about" class="nav-link">
+              关于
+            </a>
+          </li>
+          
+        </ul>
+      </nav>
+      
+      
+      
+      <button class="search-btn" id="search-btn" title="搜索 (Ctrl+K)">
+        <i class="fas fa-search"></i>
+      </button>
+      
+    </div>
+    
+    
+    <div class="header-mobile">
+      
+      <button class="search-btn-mobile" id="search-btn-mobile" aria-label="搜索">
+        <i class="fas fa-search"></i>
+      </button>
+      
+      <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="菜单">
+        <i class="fas fa-bars"></i>
+      </button>
+    </div>
+  </div>
+  
+  
+  <nav class="mobile-nav" id="mobile-nav">
+    <ul class="mobile-nav-list">
+      
+      <li class="mobile-nav-item">
+        <a href="/" class="mobile-nav-link">
+          首页
+        </a>
+      </li>
+      
+      <li class="mobile-nav-item">
+        <a href="/archives" class="mobile-nav-link">
+          归档
+        </a>
+      </li>
+      
+      <li class="mobile-nav-item">
+        <a href="/categories" class="mobile-nav-link">
+          分类
+        </a>
+      </li>
+      
+      <li class="mobile-nav-item">
+        <a href="/tags" class="mobile-nav-link">
+          标签
+        </a>
+      </li>
+      
+      <li class="mobile-nav-item">
+        <a href="/about" class="mobile-nav-link">
+          关于
+        </a>
+      </li>
+      
+    </ul>
+  </nav>
+</header>
+    
+    
+    <main id="main" class="layout-right">
+      <div class="main-inner">
+        
+        <div id="content-wrap">
+          
+
+
+<article id="post-page" class="post-content" data-type="post">
+  
+  <header class="post-header">
+    <h1 class="post-title">U-Boot编译过程的中间配置文件</h1>
+    
+<div class="post-meta">
+  
+  
+  <span class="meta-item">
+    <i class="far fa-calendar-alt"></i>
+    <time datetime="2026-01-06T09:13:00.000Z">
+      2026-01-06
+    </time>
+  </span>
+  
+  
+  
+  
+  <span class="meta-item">
+    <i class="fas fa-history"></i>
+    <time datetime="2026-01-06T09:19:23.264Z">
+      2026-01-06
+    </time>
+  </span>
+  
+  
+  
+  
+  <span class="meta-item">
+    <i class="far fa-folder-open"></i>
+    
+    
+      <a href="/categories/U-Boot/">U-Boot</a>
+    
+  </span>
+  
+  
+  
+  
+  <span class="meta-item">
+    <i class="far fa-file-word"></i>
+    
+    555
+  </span>
+  
+  
+  
+  
+  <span class="meta-item">
+    <i class="far fa-clock"></i>
+    
+    约 3 分钟
+  </span>
+  
+</div>
+  </header>
+  
+  
+  <div class="post-body-wrap need-verify encrypted" 
+       id="post-body-wrap"
+       
+       data-code-hash="f58029d38e8c42613d5f98392ea4452d24f91e5225e12606e58623737536f0aa"
+       data-expire="7"
+       
+       
+       data-encrypted="true"
+       >
+    
+    
+      
+      <div class="post-body markdown-body encrypted-content" 
+           id="post-body" 
+           style="display: none;"
+           data-content="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">
+        
+      </div>
+      
+      
+      <div class="post-body markdown-body preview-content" id="preview-content">
+        <h1 id="U-Boot编译过程的中间配置文件"><a href="#U-Boot编译过程的中间配置文件" class="headerlink" title="U-Boot编译过程的中间配置文件"></a>U-Boot编译过程的中间配置文件</h1><p>U-Boot的编译过程会产生大量的中间产物文件，这些文件在构建过程中起着至关重要的作用。</p>
+<h2 id="1-include-config-h"><a href="#1-include-config-h" class="headerlink" title="1. include&#x2F;config.h"></a>1. include&#x2F;config.h</h2><p>在make时自动生成。在目标include&#x2F;autoconf.mk、include&#x2F;autoconf.mk.dep以及u-boot.cfg生成时，作为依赖目标被创建更新。</p>
+      </div>
+    
+    
+    
+    
+    <div class="read-verify-mask" id="read-verify-mask">
+      <div class="verify-mask-gradient"></div>
+      <div class="verify-mask-content">
+        <div class="verify-lock-icon">
+          <i class="fas fa-lock"></i>
+        </div>
+        <p class="verify-mask-text">此文章需要验证后才能阅读全文</p>
+        <button class="verify-show-btn" id="verify-show-btn">
+          <i class="fas fa-qrcode"></i>
+          获取验证码
+        </button>
+      </div>
+    </div>
+    
+  </div>
+  
+  
+  
+
+<div class="post-copyright">
+  <div class="copyright-item">
+    <span class="copyright-label">文章作者</span>
+    <span class="copyright-content">
+      
+      <a href="https://uscxi.github.io/" target="_blank" rel="noopener">STUDYWITHIOT</a>
+      
+    </span>
+  </div>
+
+  
+  <div class="copyright-item">
+    <span class="copyright-label">文章链接</span>
+    <span class="copyright-content">
+      <a href="https://uscxi.github.io/2026/01/06/U-Boot%E5%AD%A6%E4%B9%A0/U-Boot%E7%BC%96%E8%AF%91%E8%BF%87%E7%A8%8B%E7%9A%84%E4%B8%AD%E9%97%B4%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6/">https://uscxi.github.io/2026/01/06/U-Boot学习/U-Boot编译过程的中间配置文件/</a>
+    </span>
+  </div>
+  <div class="copyright-item">
+    <span class="copyright-label">版权声明</span>
+    <span class="copyright-content">
+      本博客所有文章除特别声明外，均采用 
+      <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener">CC BY-NC-SA 4.0</a> 
+      许可协议。转载请注明来自：
+      <a href="https://uscxi.github.io">STUDYWITHIOT</a> ！
+    </span>
+  </div>
+</div>
+
+  
+  
+  <div class="post-meta-bottom">
+    
+    <div class="post-tags">
+      
+        <i class="fas fa-tags"></i>
+        
+          <a href="/tags/U-Boot/" class="tag-link">#U-Boot</a>
+        
+      
+    </div>
+    
+    
+    
+
+
+<div class="post-share">
+  
+  
+  <a class="share-item weibo" 
+     href="https://service.weibo.com/share/share.php?url=https%3A%2F%2Fuscxi.github.io%2F2026%2F01%2F06%2FU-Boot%25E5%25AD%25A6%25E4%25B9%25A0%2FU-Boot%25E7%25BC%2596%25E8%25AF%2591%25E8%25BF%2587%25E7%25A8%258B%25E7%259A%2584%25E4%25B8%25AD%25E9%2597%25B4%25E9%2585%258D%25E7%25BD%25AE%25E6%2596%2587%25E4%25BB%25B6%2F&title=U-Boot%E7%BC%96%E8%AF%91%E8%BF%87%E7%A8%8B%E7%9A%84%E4%B8%AD%E9%97%B4%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6"
+     target="_blank" rel="noopener" title="微博">
+    <i class="fab fa-weibo"></i>
+  </a>
+  
+  
+  
+  
+  <a class="share-item qq"
+     href="https://connect.qq.com/widget/shareqq/index.html?url=https%3A%2F%2Fuscxi.github.io%2F2026%2F01%2F06%2FU-Boot%25E5%25AD%25A6%25E4%25B9%25A0%2FU-Boot%25E7%25BC%2596%25E8%25AF%2591%25E8%25BF%2587%25E7%25A8%258B%25E7%259A%2584%25E4%25B8%25AD%25E9%2597%25B4%25E9%2585%258D%25E7%25BD%25AE%25E6%2596%2587%25E4%25BB%25B6%2F&title=U-Boot%E7%BC%96%E8%AF%91%E8%BF%87%E7%A8%8B%E7%9A%84%E4%B8%AD%E9%97%B4%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6&summary="
+     target="_blank" rel="noopener" title="QQ">
+    <i class="fab fa-qq"></i>
+  </a>
+  
+  
+  
+  
+  <div class="share-item wechat" title="微信">
+    <i class="fab fa-weixin"></i>
+    <div class="wechat-qrcode">
+      <p>微信扫一扫分享</p>
+      <div class="qrcode-img" id="share-wechat-qrcode"></div>
+    </div>
+  </div>
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  <div class="share-item copy-link" id="share-copy-btn" title="复制链接">
+    <i class="fas fa-link"></i>
+  </div>
+  
+</div>
+
+  </div>
+  
+  
+  
+
+
+<div class="post-reward">
+  <div class="reward-wrap">
+    <button class="reward-btn">
+      <i class="fas fa-qrcode"></i>
+      <span>打赏</span>
+    </button>
+    
+    <div class="reward-popup">
+      
+      <div class="reward-text">请作者喝杯茶吧~</div>
+      
+      <div class="reward-qrcodes">
+        
+        <div class="reward-qrcode">
+          <div class="qrcode-box">
+            <img src="/images/wechat-pay.png" alt="微信打赏">
+          </div>
+          <span class="reward-label wechat">
+            <i class="fab fa-weixin"></i> 微信
+          </span>
+        </div>
+        
+        
+        <div class="reward-qrcode">
+          <div class="qrcode-box">
+            <img src="/images/alipay.png" alt="支付宝打赏">
+          </div>
+          <span class="reward-label alipay">
+            <i class="fab fa-alipay"></i> 支付宝
+          </span>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+
+  
+  
+  <nav class="post-nav">
+    
+    <a href="/2026/01/07/U-Boot%E5%AD%A6%E4%B9%A0/IMX6ULL%E5%90%AF%E5%8A%A8%E4%B8%8EDDR%E5%88%9D%E5%A7%8B%E5%8C%96/" class="prev-post">
+      <i class="fas fa-chevron-left"></i>
+      <span>IMX6ULL启动与DDR初始化</span>
+    </a>
+    
+    
+    <a href="/2025/12/02/U-Boot%E5%AD%A6%E4%B9%A0/U-Boot%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7fixdep%E7%9A%84%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%8F%8A%E7%BC%96%E8%AF%91%E5%88%86%E6%9E%90/" class="next-post">
+      <span>U-Boot构建工具fixdep的工作原理及编译分析</span>
+      <i class="fas fa-chevron-right"></i>
+    </a>
+    
+  </nav>
+  <!-- 评论系统 -->
+  
+</article>
+
+
+
+
+
+
+<div class="verify-modal-overlay" id="verify-modal-overlay">
+  <div class="verify-modal" id="verify-modal">
+    
+    <button class="verify-modal-close" id="verify-modal-close" title="关闭">
+      <i class="fas fa-times"></i>
+    </button>
+    
+    
+    <div class="verify-modal-content">
+      
+      <div class="verify-modal-header">
+        <i class="fas fa-shield-alt"></i>
+        <h3>阅读验证</h3>
+      </div>
+      
+      
+      <div class="verify-qrcode-wrap">
+        <div class="verify-qrcode">
+          <img src="/images/qrcode.png" 
+               alt="公众号二维码"
+               onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 200%22><rect fill=%22%23f0f0f0%22 width=%22200%22 height=%22200%22/><text x=%22100%22 y=%22100%22 font-size=%2214%22 fill=%22%23999%22 text-anchor=%22middle%22>二维码加载失败</text></svg>'">
+        </div>
+        
+        <p class="verify-wechat-name">
+          <i class="fab fa-weixin"></i>
+          STUDYWITHIOT
+        </p>
+        
+      </div>
+      
+      
+      <div class="verify-tips">
+        <p>关注公众号，回复「博客」获取验证码</p>
+      </div>
+      
+      
+      <div class="verify-input-wrap">
+        <div class="verify-input-group">
+          <input type="text" 
+                 id="verify-code-input" 
+                 class="verify-input" 
+                 placeholder="请输入验证码"
+                 maxlength="10"
+                 autocomplete="off">
+          <button class="verify-submit-btn" id="verify-submit-btn">
+            <i class="fas fa-unlock-alt"></i>
+            验证
+          </button>
+        </div>
+        <p class="verify-error" id="verify-error"></p>
+      </div>
+      
+      
+      <div class="verify-footer">
+        
+          <p>验证成功后 7 天内无需重复验证</p>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+        </div>
+        
+        
+        
+<aside id="sidebar" class="sidebar">
+  <div class="sidebar-inner">
+    
+    <div id="sidebar-info" class="sidebar-content active">
+      
+<div class="card-widget card-info">
+  <div class="card-content">
+    
+    
+    <div class="author-info">
+      <div class="author-avatar">
+        <img src="/images/avatar.png" 
+             alt="STUDYWITHIOT">
+      </div>
+      
+      <div class="author-name">
+        STUDYWITHIOT
+      </div>
+      
+      <div class="author-description">
+        心之何如，有似万丈迷津，遥亘千里，其中并无舟子可以渡人，除了自渡，他人爱莫能助。
+      </div>
+    </div>
+    
+    
+    
+    <div class="site-stats">
+      <a href="/archives/" class="stat-item">
+        <span class="stat-count">44</span>
+        <span class="stat-name">文章</span>
+      </a>
+      <a href="/categories/" class="stat-item">
+        
+        <span class="stat-count">12</span>
+        <span class="stat-name">分类</span>
+      </a>
+      <a href="/tags/" class="stat-item">
+        <span class="stat-count">18</span>
+        <span class="stat-name">标签</span>
+      </a>
+    </div>
+    
+    
+    
+    <div class="social-links">
+      
+      <a href="https://github.com/uscxi" class="social-link" target="_blank" rel="noopener" title="github">
+        <i class="fab fa-github"></i>
+      </a>
+      
+      <a href="mailto:xxiao9969@163.com" class="social-link" target="_blank" rel="noopener" title="email">
+        <i class="fas fa-envelope"></i>
+      </a>
+      
+    </div>
+    
+  </div>
+</div>
+
+      
+      
+
+<div class="card-widget card-announcement">
+  <div class="card-content">
+    
+    <div class="announcement-header">
+      
+      <i class="fas fa-bullhorn"></i>
+      
+      <span class="announcement-title">
+        公告
+      </span>
+    </div>
+    
+    
+    <div class="announcement-content">
+      
+        <p><strong>欢迎来到我的博客！</strong></p>
+<p>关注公众号查看更多技术文章</p>
+<img src="/images/qrcode.png" >
+<p>如果你在访问中遇到问题，可前往公众号进行反馈</p>
+
+      
+    </div>
+    
+    
+    
+    <div class="announcement-link">
+      <a href="/about/" 
+         >
+        了解更多
+        <i class="fas fa-chevron-right"></i>
+      </a>
+    </div>
+    
+  </div>
+</div>
+
+    </div>
+    
+    
+    
+    <div id="sidebar-toc" class="sidebar-content">
+      
+<div class="card-widget card-toc">
+  <div class="card-header">
+    <span class="card-title">
+      <i class="fas fa-list-ul"></i> 目录
+    </span>
+    <span class="toc-progress" id="toc-progress">0%</span>
+  </div>
+  <div class="card-body">
+    <div class="toc-content" id="toc-content">
+      
+        <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#U-Boot%E7%BC%96%E8%AF%91%E8%BF%87%E7%A8%8B%E7%9A%84%E4%B8%AD%E9%97%B4%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6"><span class="toc-text">U-Boot编译过程的中间配置文件</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-include-config-h"><span class="toc-text">1. include&#x2F;config.h</span></a></li></ol></li></ol>
+      
+    </div>
+  </div>
+</div>
+    </div>
+    
+  </div>
+</aside>
+      </div>
+    </main>
+    
+    
+    
+<footer id="footer" class="footer">
+  <div class="footer-inner">
+    
+     
+    <div class="footer-copyright">
+      <span>
+        Copyright &copy; 
+        
+          2025 - 
+        
+        2026
+      </span>
+      <span class="footer-author">STUDYWITHIOT</span><span>. All Rights Reserved</span>
+    </div>
+    
+    
+    
+    
+    <div class="footer-powered">
+      <span>Powered by</span>
+      <a href="https://hexo.io" target="_blank" rel="noopener">Hexo</a>
+      <span>|</span>
+      <span>Theme by</span>
+      <a href="https://github.com/uscxi" target="_blank" rel="noopener">uscxi</a>
+    </div>
+    
+  </div>
+</footer>
+  </div>
+  
+  
+  
+
+<div id="rightside" class="rightside">
+  
+  <div id="rightside-top-area" class="rightside-top-area">
+    
+    
+    <button id="toc-toggle" class="rightside-btn" title="目录" data-mode="info">
+      <i class="fas fa-list-ul" id="toc-toggle-icon"></i>
+    </button>
+    
+    
+    
+    <div id="rightside-menus" class="rightside-menus">
+      
+      
+      <button id="hide-sidebar-btn" class="rightside-btn rightside-item" title="隐藏侧边栏">
+        <i class="fas fa-arrows-alt-h"></i>
+      </button>
+      
+      
+      
+      
+      <button id="theme-toggle-btn" class="rightside-btn rightside-item" title="切换主题">
+        <i class="fas fa-adjust"></i>
+      </button>
+      
+    </div>
+  </div>
+  
+  
+  <div id="rightside-bottom-area" class="rightside-bottom-area">
+    
+    <button id="rightside-toggle" class="rightside-btn rightside-toggle" title="更多功能">
+      <i class="fas fa-cog"></i>
+    </button>
+    
+    
+    
+    <button id="go-top" class="rightside-btn rightside-go-top" title="返回顶部">
+      <span class="scroll-percent">0</span>
+      <i class="fas fa-arrow-up"></i>
+    </button>
+    
+  </div>
+</div>
+
+
+  
+  
+
+
+<div id="search-mask" class="search-mask"></div>
+
+
+<div id="search-modal" class="search-modal">
+  <div class="search-dialog">
+    
+    <div class="search-header">
+      <div class="search-input-wrap">
+        <i class="fas fa-search search-icon"></i>
+        <input 
+          type="text" 
+          id="search-input" 
+          class="search-input" 
+          placeholder="搜索文章..."
+          autocomplete="off"
+        >
+        <button id="search-clear" class="search-clear" title="清空">
+          <i class="fas fa-times-circle"></i>
+        </button>
+      </div>
+      <button id="search-close" class="search-close" title="关闭 (ESC)">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    
+    <div class="search-tips">
+      <span><kbd>↑</kbd><kbd>↓</kbd> 导航</span>
+      <span><kbd>Enter</kbd> 打开</span>
+      <span><kbd>ESC</kbd> 关闭</span>
+    </div>
+    
+    
+    <div id="search-results" class="search-results">
+      <div class="search-init">
+        <i class="fas fa-search"></i>
+        <p>输入关键词开始搜索</p>
+      </div>
+    </div>
+    
+    
+    <div id="search-stats" class="search-stats"></div>
+  </div>
+</div>
+
+
+  
+  <script src="/js/main.js"></script>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/rightside.js"></script>
+
+  
+  <script src="/js/search.js"></script>
+  
+  
+  
+  
+    
+    <script src="/js/prism/prism.js"></script>
+    
+    <script src="/js/toc.js"></script>
+    
+    
+    <script src="/js/post-actions.js"></script>
+    
+    
+      <script src="/js/encrypt-config.js"></script>
+      <script src="/js/crypto-js.min.js"></script>
+      <script src="/js/post-verify.js"></script>
+    
+  
+</body>
+</html>

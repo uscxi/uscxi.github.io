@@ -1,0 +1,1313 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search> 
+  
+  
+    
+    <entry>
+      <title>IMX6ULL MMDC握手机制</title>
+      <link href="/2026/05/07/U-Boot%E5%AD%A6%E4%B9%A0/IMX6ULL_MMDC%E6%8F%A1%E6%89%8B%E6%9C%BA%E5%88%B6/"/>
+      <url>/2026/05/07/U-Boot%E5%AD%A6%E4%B9%A0/IMX6ULL_MMDC%E6%8F%A1%E6%89%8B%E6%9C%BA%E5%88%B6/</url>
+      
+        <content type="html"><![CDATA[<blockquote><p><strong>系列</strong>：从零开始逐步实现U-Boot</p><p><strong>目标平台</strong>：NXP i.MX6ULL (ARM Cortex-A7)</p><p><strong>U-Boot参考版本</strong>：2025.01</p></blockquote><p>在嵌入式系统的时钟管理中，修改正在运行的内存控制器的时钟频率是一项极其危险的操作。内存控制器（MMDC）每时每刻都在为CPU提供指令和数据，如果在传输进行中途突然改变时钟频率，轻则数据错误，重则系统崩溃。</p><p>i.MX6ULL的设计者为此引入了一套”握手协议”（Handshake Protocol），让时钟控制器（CCM）和内存控制器（MMDC）在改变时钟之前先”打招呼、达成共识”，确保在安全的时间窗口内才执行频率切换。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> IMX6ULL </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>QEMU mcimx6ul-evk模拟开发板问题记录</title>
+      <link href="/2026/04/21/QEMU/mcimx6ul-evk%E6%A8%A1%E6%8B%9F%E5%BC%80%E5%8F%91%E6%9D%BF%E9%97%AE%E9%A2%98%E8%AE%B0%E5%BD%95/"/>
+      <url>/2026/04/21/QEMU/mcimx6ul-evk%E6%A8%A1%E6%8B%9F%E5%BC%80%E5%8F%91%E6%9D%BF%E9%97%AE%E9%A2%98%E8%AE%B0%E5%BD%95/</url>
+      
+        <content type="html"><![CDATA[<blockquote><p>QEMU源码版本：10.2.1</p></blockquote><p>在QEMU <code>mcimx6ul-evk</code> 模拟板上运行U-Boot时，我们发现系统无法正常启动U-Boot。其根本原因是QEMU的外设模拟是不完整的。</p><p>QEMU模拟一个SoC平台时，<strong>并不会实现该芯片的所有硬件模块</strong>。QEMU的设计哲学是：</p><blockquote><p><strong>只实现让目标软件能够”基本运行”所需的最小硬件子集。</strong></p></blockquote><p>当CPU尝试访问QEMU<strong>未注册任何设备</strong>的内存映射地址时，QEMU会将其处理为对应的错误，并向模拟的ARM CPU注入一个异常。</p><p>下面记录了在U-Boot源码学习中遇到的一些QEMU相关的问题。</p><h2 id="一、问题1：mcimx6ul-evk-未实现-AIPS"><a href="#一、问题1：mcimx6ul-evk-未实现-AIPS" class="headerlink" title="一、问题1：mcimx6ul-evk 未实现 AIPS"></a>一、问题1：mcimx6ul-evk 未实现 AIPS</h2>]]></content>
+      
+      
+      <categories>
+          
+          <category> QEMU </category>
+          
+          <category> IMX6UL </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> QEMU </tag>
+            
+            <tag> IMX6UL </tag>
+            
+            <tag> mcimx6ul-evk </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>Bandgap参考电压初始化</title>
+      <link href="/2026/04/20/U-Boot%E5%AD%A6%E4%B9%A0/Bandgap%E5%8F%82%E8%80%83%E7%94%B5%E5%8E%8B%E5%88%9D%E5%A7%8B%E5%8C%96/"/>
+      <url>/2026/04/20/U-Boot%E5%AD%A6%E4%B9%A0/Bandgap%E5%8F%82%E8%80%83%E7%94%B5%E5%8E%8B%E5%88%9D%E5%A7%8B%E5%8C%96/</url>
+      
+        <content type="html"><![CDATA[<blockquote><p>系列：从零开始逐步实现U-Boot<br>目标平台：NXP i.MX6ULL (ARM Cortex-A7)<br>QEMU mcimx6ul-evk模拟板 或 正点原子IMX6ULL-MINI板</p></blockquote><p>在深入代码之前，我们需要理解一个根本性的问题：<strong>一颗现代SoC内部有大量的模拟电路（温度传感器、PLL锁相环、ADC模数转换器、LDO稳压器、DDR PHY等），这些模拟电路都需要一个精确且稳定的”参考电压”来正常工作。</strong> 这个参考电压从哪里来？答案就是 <strong>Bandgap Reference（带隙基准电压源）</strong>。</p><h2 id="一、带隙基准（Bandgap-Reference）"><a href="#一、带隙基准（Bandgap-Reference）" class="headerlink" title="一、带隙基准（Bandgap Reference）"></a>一、带隙基准（Bandgap Reference）</h2><h3 id="1-1-基本原理"><a href="#1-1-基本原理" class="headerlink" title="1.1 基本原理"></a>1.1 基本原理</h3>]]></content>
+      
+      
+      <categories>
+          
+          <category> IMX6ULL </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>IMX6ULL AIPS总线详解：从硬件架构到软件配置</title>
+      <link href="/2026/04/12/U-Boot%E5%AD%A6%E4%B9%A0/AIPS%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E7%A1%AC%E4%BB%B6%E6%9E%B6%E6%9E%84%E5%88%B0%E8%BD%AF%E4%BB%B6%E9%85%8D%E7%BD%AE/"/>
+      <url>/2026/04/12/U-Boot%E5%AD%A6%E4%B9%A0/AIPS%E8%AF%A6%E8%A7%A3%EF%BC%9A%E4%BB%8E%E7%A1%AC%E4%BB%B6%E6%9E%B6%E6%9E%84%E5%88%B0%E8%BD%AF%E4%BB%B6%E9%85%8D%E7%BD%AE/</url>
+      
+        <content type="html"><![CDATA[<blockquote><p><strong>系列</strong>：从零开始逐步实现U-Boot</p><p><strong>目标平台</strong>：NXP i.MX6ULL (ARM Cortex-A7)</p><p><strong>U-Boot参考版本</strong>：2025.01</p></blockquote><p>在学习i.MX6ULL的启动代码、阅读芯片参考手册或研究Linux设备树时，AIPS这个词会频繁出现。U-Boot的早期初始化代码中有专门的AIPS配置步骤，设备树中几乎所有的片上外设都挂载在AIPS节点之下，芯片手册的内存映射章节将大量地址空间划分给AIPS管理。</p><p>对于初学者来说，AIPS是一个容易被忽视却至关重要的概念。它既不像处理器核心那样功能直观，也不像UART、I2C那样有具体的应用场景，但它是所有片上外设能够被正确访问的基础设施。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> IMX6ULL </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>U-Boot日志系统深度解析</title>
+      <link href="/2026/04/10/U-Boot%E5%AD%A6%E4%B9%A0/U-Boot%E6%97%A5%E5%BF%97%E7%B3%BB%E7%BB%9F%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/"/>
+      <url>/2026/04/10/U-Boot%E5%AD%A6%E4%B9%A0/U-Boot%E6%97%A5%E5%BF%97%E7%B3%BB%E7%BB%9F%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/</url>
+      
+        <content type="html"><![CDATA[<blockquote><p>系列：从零开始逐步实现U-Boot<br>目标平台：NXP i.MX6ULL (ARM Cortex-A7)<br>U-Boot参考版本：2025.01</p></blockquote><h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>日志系统是任何复杂软件的基础设施。在 U-Boot 这样的嵌入式引导加载程序中，日志系统承担着调试输出、错误诊断、运行状态追踪等关键职责。从最早的简单 <code>printf</code> 调试，到如今支持多驱动、多过滤器、分类分级的完整日志框架，通过<strong>链接器列表</strong>（Linker List）实现驱动的自动注册，无需手动维护驱动数组。U-Boot 的日志系统经历了深刻的架构演进。</p><p>本文将深入剖析U-Boot日志系统的核心实现，从底层的链接器机制到初始化使用，全面解析这个精巧的系统。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> ARM </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> ARM </tag>
+            
+            <tag> U-Boot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>深入剖析内核中高性能十进制整数转换算法</title>
+      <link href="/2026/04/06/U-Boot%E5%AD%A6%E4%B9%A0/%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E5%86%85%E6%A0%B8%E4%B8%AD%E9%AB%98%E6%80%A7%E8%83%BD%E5%8D%81%E8%BF%9B%E5%88%B6%E6%95%B4%E6%95%B0%E8%BD%AC%E6%8D%A2%E7%AE%97%E6%B3%95/"/>
+      <url>/2026/04/06/U-Boot%E5%AD%A6%E4%B9%A0/%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90%E5%86%85%E6%A0%B8%E4%B8%AD%E9%AB%98%E6%80%A7%E8%83%BD%E5%8D%81%E8%BF%9B%E5%88%B6%E6%95%B4%E6%95%B0%E8%BD%AC%E6%8D%A2%E7%AE%97%E6%B3%95/</url>
+      
+        <content type="html"><![CDATA[<p>在操作系统内核开发中，整数到十进制字符串的转换是一个极其高频的操作。每当用户读取 <code>/proc</code> 或 <code>/sys</code> 文件系统中的数据时，内核都需要将内部的二进制数值转换为人类可读的十进制字符串。以 <code>top</code> 命令为例，当系统中运行着大量进程时，每次刷新都需要对数百乃至数千个进程的各项数值指标（PID、内存占用、CPU时间等）进行十进制转换。因此，这一看似简单的转换操作，其性能直接影响着整个系统的监控效率。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> 算法 </category>
+          
+          <category> 内核 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> 算法 </tag>
+            
+            <tag> 内核 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>QEMU固件加载机制——IMX6ULL u-boot.bin加载调试</title>
+      <link href="/2026/03/31/QEMU/QEMU%E5%9B%BA%E4%BB%B6%E5%8A%A0%E8%BD%BD%E6%9C%BA%E5%88%B6/"/>
+      <url>/2026/03/31/QEMU/QEMU%E5%9B%BA%E4%BB%B6%E5%8A%A0%E8%BD%BD%E6%9C%BA%E5%88%B6/</url>
+      
+        <content type="html"><![CDATA[<blockquote><p>系列：从零开始逐步实现U-Boot</p><p>目标平台：NXP i.MX6ULL (ARM Cortex-A7)</p><p>QEMU mcimx6ul-evk模拟板 或 正点原子IMX6ULL-MINI板</p></blockquote><p><code>qemu-system-arm</code>的<code>-M mcimx6ul-evk</code>机器模型模拟了i.MX6UL&#x2F;6ULL的硬件，先前我们都是直接使用 <code>-kernel</code> 参数加载 u-boot 的 ELF 格式文件去运行。</p><p>但是在打包dtb后，运行调试时我们会发现运行报错：</p><pre class="line-numbers language-none"><code class="language-none">No valid device tree binary found at 87806744<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>]]></content>
+      
+      
+      <categories>
+          
+          <category> IMX6ULL </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+            <tag> QEMU </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>U-Boot中的设备树编译工具DTC</title>
+      <link href="/2026/03/31/U-Boot%E5%AD%A6%E4%B9%A0/U-Boot%E4%B8%AD%E7%9A%84%E8%AE%BE%E5%A4%87%E6%A0%91%E7%BC%96%E8%AF%91%E5%B7%A5%E5%85%B7DTC/"/>
+      <url>/2026/03/31/U-Boot%E5%AD%A6%E4%B9%A0/U-Boot%E4%B8%AD%E7%9A%84%E8%AE%BE%E5%A4%87%E6%A0%91%E7%BC%96%E8%AF%91%E5%B7%A5%E5%85%B7DTC/</url>
+      
+        <content type="html"><![CDATA[<blockquote><p>系列：从零开始逐步实现U-Boot</p><p>目标平台：NXP i.MX6ULL (ARM Cortex-A7)</p><p>QEMU mcimx6ul-evk模拟板 或 正点原子IMX6ULL-MINI板</p><p>U-Boot参考版本：2025.01</p></blockquote><p>设备树（Device Tree）是现代嵌入式Linux系统中描述硬件配置的标准方式。它起源于OpenFirmware规范，最初在PowerPC架构中使用，后来被ARM架构广泛采用。2013年前后，U-Boot开始全面引入设备树支持，这标志着Bootloader配置方式的重大转变——从硬编码的C语言配置头文件转向灵活的、可描述的设备树格式。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> IMX6ULL </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+            <tag> QEMU </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>从零开始逐步实现U-Boot(五)—init_sequence_f初始化序列分析</title>
+      <link href="/2026/03/31/U-Boot%E5%AD%A6%E4%B9%A0/%E4%BB%8E%E9%9B%B6%E5%BC%80%E5%A7%8B%E9%80%90%E6%AD%A5%E5%AE%9E%E7%8E%B0U-Boot(%E4%BA%94)/"/>
+      <url>/2026/03/31/U-Boot%E5%AD%A6%E4%B9%A0/%E4%BB%8E%E9%9B%B6%E5%BC%80%E5%A7%8B%E9%80%90%E6%AD%A5%E5%AE%9E%E7%8E%B0U-Boot(%E4%BA%94)/</url>
+      
+        <content type="html"><![CDATA[<blockquote><p>系列：从零开始逐步实现U-Boot<br>U-Boot版本：2025.01<br>目标平台：NXP i.MX6ULL (ARM Cortex-A7)<br>QEMU mcimx6ul-evk模拟板 或 正点原子IMX6ULL-MINI板</p></blockquote><p>在上一篇文章中，我们深入分析了 GD（Global Data）结构体和 <code>board_init_f</code> 框架的基本原理。现在我们知道，<code>board_init_f</code> 的核心工作是通过 <code>initcall_run_list</code> 机制依次执行 <code>init_sequence_f</code> 数组中注册的所有初始化函数。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> IMX6ULL </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+            <tag> QEMU </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>IMX6ULL裸机开发中的C语言算术运行时辅助函数（三）—— 64位除法与乘法</title>
+      <link href="/2026/03/30/U-Boot%E5%AD%A6%E4%B9%A0/IMX6ULL%E8%A3%B8%E6%9C%BA%E5%BC%80%E5%8F%91%E4%B8%AD%E7%9A%84C%E8%AF%AD%E8%A8%80%E7%AE%97%E6%9C%AF%E8%BF%90%E8%A1%8C%E6%97%B6%E8%BE%85%E5%8A%A9%E5%87%BD%E6%95%B0(%E4%B8%89)/"/>
+      <url>/2026/03/30/U-Boot%E5%AD%A6%E4%B9%A0/IMX6ULL%E8%A3%B8%E6%9C%BA%E5%BC%80%E5%8F%91%E4%B8%AD%E7%9A%84C%E8%AF%AD%E8%A8%80%E7%AE%97%E6%9C%AF%E8%BF%90%E8%A1%8C%E6%97%B6%E8%BE%85%E5%8A%A9%E5%87%BD%E6%95%B0(%E4%B8%89)/</url>
+      
+        <content type="html"><![CDATA[<p>在前两篇文章中，我们详细分析了ARM平台上的64位移位运算（ashldi3.S、ashrdi3.S、lshrdi3.S）和32位除法取模运算（lib1funcs.S）的软件实现。本文将继续探索U-Boot ARM运行时辅助算术库的<strong>64位除法与64位乘法</strong>。</p><p>64位除法是整个运行时库中最复杂的算法之一，它不仅涉及复杂的数学原理，还需要精妙的工程优化来确保性能。而64位乘法虽然概念上相对简单，但在32位处理器上实现时也需要巧妙地处理进位传递和部分积累加。</p><p>本文将详细分析U-Boot中以下关键文件：</p><ul><li><code>div64.S</code> —— 64位÷32位的特化除法</li><li><code>uldivmod.S</code> —— 64位÷64位的通用除法（无符号）</li>]]></content>
+      
+      
+      <categories>
+          
+          <category> ARM </category>
+          
+          <category> IMX6ULL </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> ARM </tag>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>从零开始逐步实现U-Boot(三)—-IMX6ULL早期Debug UART及格式化输出实现</title>
+      <link href="/2026/03/24/U-Boot%E5%AD%A6%E4%B9%A0/%E4%BB%8E%E9%9B%B6%E5%BC%80%E5%A7%8B%E9%80%90%E6%AD%A5%E5%AE%9E%E7%8E%B0U-Boot(%E4%B8%89)/"/>
+      <url>/2026/03/24/U-Boot%E5%AD%A6%E4%B9%A0/%E4%BB%8E%E9%9B%B6%E5%BC%80%E5%A7%8B%E9%80%90%E6%AD%A5%E5%AE%9E%E7%8E%B0U-Boot(%E4%B8%89)/</url>
+      
+        <content type="html"><![CDATA[<blockquote><p>系列：从零开始逐步实现U-Boot</p><p>目标平台：NXP i.MX6ULL (ARM Cortex-A7)</p><p>QEMU mcimx6ul-evk模拟板 或 正点原子IMX6ULL-MINI板</p></blockquote><p>本文是从零开始逐步实现U-Boot实战系列的第三篇。</p><h2 id="一、前言"><a href="#一、前言" class="headerlink" title="一、前言"></a>一、前言</h2><p>当我们调试一块开发板时，最希望的就是能随时看到调试信息。理想的情况是，代码运行到任何位置，我们都能通过某种方式获知当前状态——是正常通过了，还是卡在了某处，变量的值是否符合预期。对于桌面开发，我们可以依赖 IDE 的断点、控制台输出；对于嵌入式 Linux 应用，也可以用 <code>printf</code> 轻松打印。但在 U-Boot 移植的早期阶段，这些便利都不复存在。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> IMX6ULL </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+            <tag> QEMU </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>IMX6ULL裸机开发中的C语言算术运行时辅助函数（二）—— lib1funcs.S 32位除法与取模</title>
+      <link href="/2026/03/24/U-Boot%E5%AD%A6%E4%B9%A0/IMX6ULL%E8%A3%B8%E6%9C%BA%E5%BC%80%E5%8F%91%E4%B8%AD%E7%9A%84C%E8%AF%AD%E8%A8%80%E7%AE%97%E6%9C%AF%E8%BF%90%E8%A1%8C%E6%97%B6%E8%BE%85%E5%8A%A9%E5%87%BD%E6%95%B0(%E4%BA%8C)/"/>
+      <url>/2026/03/24/U-Boot%E5%AD%A6%E4%B9%A0/IMX6ULL%E8%A3%B8%E6%9C%BA%E5%BC%80%E5%8F%91%E4%B8%AD%E7%9A%84C%E8%AF%AD%E8%A8%80%E7%AE%97%E6%9C%AF%E8%BF%90%E8%A1%8C%E6%97%B6%E8%BE%85%E5%8A%A9%E5%87%BD%E6%95%B0(%E4%BA%8C)/</url>
+      
+        <content type="html"><![CDATA[<p>在<a href="https://mp.weixin.qq.com/s/7UZH12Hu2DKmfuiVE5-FRw">上一篇</a>文章中，我们深入分析了64位移位运算的编译器辅助函数（<code>ashldi3.S</code>、<code>ashrdi3.S</code>、<code>lshrdi3.S</code>）。本文将继续探索U-Boot ARM运行时辅助算术库中更为复杂的部分：<strong>除法、取模和乘法运算</strong>的实现。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> ARM </category>
+          
+          <category> IMX6ULL </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> ARM </tag>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>IMX6ULL裸机开发中的C语言算术运行时辅助函数（一）</title>
+      <link href="/2026/03/23/U-Boot%E5%AD%A6%E4%B9%A0/IMX6ULL%E8%A3%B8%E6%9C%BA%E5%BC%80%E5%8F%91%E4%B8%AD%E7%9A%84C%E8%AF%AD%E8%A8%80%E7%AE%97%E6%9C%AF%E8%BF%90%E8%A1%8C%E6%97%B6%E8%BE%85%E5%8A%A9%E5%87%BD%E6%95%B0(%E4%B8%80)/"/>
+      <url>/2026/03/23/U-Boot%E5%AD%A6%E4%B9%A0/IMX6ULL%E8%A3%B8%E6%9C%BA%E5%BC%80%E5%8F%91%E4%B8%AD%E7%9A%84C%E8%AF%AD%E8%A8%80%E7%AE%97%E6%9C%AF%E8%BF%90%E8%A1%8C%E6%97%B6%E8%BE%85%E5%8A%A9%E5%87%BD%E6%95%B0(%E4%B8%80)/</url>
+      
+        <content type="html"><![CDATA[<h2 id="一、问题背景"><a href="#一、问题背景" class="headerlink" title="一、问题背景"></a>一、问题背景</h2><p>在IMX6ULL裸机开发中，当我们编写如下简单代码时：</p><pre class="line-numbers language-none"><code class="language-none">unsigned int result &#x3D; 100 &#x2F; 3;unsigned int remainder &#x3D; 100 % 3;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre><p>使用<code>arm-none-eabi-gcc</code>交叉编译链接后，会遇到如下错误：</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> ARM </category>
+          
+          <category> IMX6ULL </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> ARM </tag>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>C语言可变参数机制与裸机环境格式化输出实现</title>
+      <link href="/2026/03/22/U-Boot%E5%AD%A6%E4%B9%A0/%E5%8F%AF%E5%8F%98%E5%8F%82%E6%95%B0%E6%9C%BA%E5%88%B6%E4%B8%8E%E8%A3%B8%E6%9C%BA%E7%8E%AF%E5%A2%83%E6%A0%BC%E5%BC%8F%E5%8C%96%E8%BE%93%E5%87%BA/"/>
+      <url>/2026/03/22/U-Boot%E5%AD%A6%E4%B9%A0/%E5%8F%AF%E5%8F%98%E5%8F%82%E6%95%B0%E6%9C%BA%E5%88%B6%E4%B8%8E%E8%A3%B8%E6%9C%BA%E7%8E%AF%E5%A2%83%E6%A0%BC%E5%BC%8F%E5%8C%96%E8%BE%93%E5%87%BA/</url>
+      
+        <content type="html"><![CDATA[<p>在 IMX6ULL 裸机开发中，当我们在 _main 函数的最早期阶段（board_init_f前期）进行调试时，面临一个尴尬的处境：</p><ul><li><strong>C 运行时库尚未初始化</strong>——无法使用标准 printf</li><li><strong>堆内存管理器不存在</strong>——无法使用任何依赖 malloc 的函数</li><li><strong>只有最原始的硬件访问能力</strong>——早期Debug UART调试，可能只实现了 printch（发送单字符）和 printascii（发送字符串）</li></ul><p>这时候，如果想输出类似 “DRAM size &#x3D; 512MB, base &#x3D; 0x80000000” 这样包含变量的调试信息，就必须自己实现一个格式化输出函数。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> IMX6ULL </category>
+          
+          <category> C语言 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+            <tag> C语言 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>从零开始逐步实现U-Boot(四)—-GD结构体与board_init_f框架</title>
+      <link href="/2026/03/15/U-Boot%E5%AD%A6%E4%B9%A0/%E4%BB%8E%E9%9B%B6%E5%BC%80%E5%A7%8B%E9%80%90%E6%AD%A5%E5%AE%9E%E7%8E%B0U-Boot(%E5%9B%9B)/"/>
+      <url>/2026/03/15/U-Boot%E5%AD%A6%E4%B9%A0/%E4%BB%8E%E9%9B%B6%E5%BC%80%E5%A7%8B%E9%80%90%E6%AD%A5%E5%AE%9E%E7%8E%B0U-Boot(%E5%9B%9B)/</url>
+      
+        <content type="html"><![CDATA[<blockquote><p>系列：从零开始逐步实现U-Boot</p><p>目标平台：<em>NXP i.MX6ULL (ARM Cortex-A7)</em></p><p>QEMU mcimx6ul-evk模拟板 或 正点原子IMX6ULL-MINI板</p></blockquote><h2 id="一、前言"><a href="#一、前言" class="headerlink" title="一、前言"></a>一、前言</h2><p>在前三篇文章中，我们完成了最小Bootloader的基础框架：reset向量启动、LED控制、早期调试串口。这些代码能够运行，但从架构角度审视，它们仍是”散装”的裸机程序——缺乏统一的状态管理，没有规范的初始化流程，各功能模块之间也没有清晰的数据传递机制。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> IMX6ULL </category>
+          
+          <category> QEMU </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+            <tag> QEMU </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>IMX6ULL早期调试串口UART实现</title>
+      <link href="/2026/03/14/U-Boot%E5%AD%A6%E4%B9%A0/IMX6ULL%E6%97%A9%E6%9C%9F%E8%B0%83%E8%AF%95%E4%B8%B2%E5%8F%A3UART%E5%AE%9E%E7%8E%B0/"/>
+      <url>/2026/03/14/U-Boot%E5%AD%A6%E4%B9%A0/IMX6ULL%E6%97%A9%E6%9C%9F%E8%B0%83%E8%AF%95%E4%B8%B2%E5%8F%A3UART%E5%AE%9E%E7%8E%B0/</url>
+      
+        <content type="html"><![CDATA[<blockquote><p>系列：从零开始逐步实现U-Boot</p><p>目标平台：NXP i.MX6ULL (ARM Cortex-A7)</p><p>QEMU mcimx6ul-evk模拟板 或 正点原子IMX6ULL-MINI板</p></blockquote><h1 id="一、前言"><a href="#一、前言" class="headerlink" title="一、前言"></a>一、前言</h1><p><a href="https://mp.weixin.qq.com/s/I_9AHJc3dZBVeYWr4HXTxw">上一篇</a>我们成功点亮了IMX6ULL的LED，并在 <code>_main</code> 函数中初步使用C语言完成了简单的外设控制。但在真正的U-Boot源码中，<code>_main</code> 是整个引导流程的核心骨架，承载着从板级早期初始化（<code>board_init_f</code>）到重定位（relocate）再到后期初始化（<code>board_init_r</code>）的完整生命周期。在这个漫长而复杂的启动链路中，一旦出现问题，若没有任何调试手段，排查将极为困难。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> IMX6ULL </category>
+          
+          <category> QEMU </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+            <tag> QEMU </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>从零开始逐步实现U-Boot(二)——IMX6ULL启动流程与C运行环境构建</title>
+      <link href="/2026/03/10/U-Boot%E5%AD%A6%E4%B9%A0/%E4%BB%8E%E9%9B%B6%E5%BC%80%E5%A7%8B%E9%80%90%E6%AD%A5%E5%AE%9E%E7%8E%B0U-Boot(%E4%BA%8C)/"/>
+      <url>/2026/03/10/U-Boot%E5%AD%A6%E4%B9%A0/%E4%BB%8E%E9%9B%B6%E5%BC%80%E5%A7%8B%E9%80%90%E6%AD%A5%E5%AE%9E%E7%8E%B0U-Boot(%E4%BA%8C)/</url>
+      
+        <content type="html"><![CDATA[<blockquote><p>系列：从零开始逐步实现U-Boot</p><p>目标平台：<em>NXP i.MX6ULL (ARM Cortex-A7)</em></p><p>QEMU mcimx6ul-evk模拟板 或 正点原子IMX6ULL-MINI板</p></blockquote><p>本篇文章将深入探讨嵌入式系统启动的核心问题：<strong>如何让芯片从上电复位状态，一步步进入到可以执行C语言代码的环境，并最终通过硬件验证（点亮LED）证明我们的启动代码是正确的</strong>。</p><p>这个过程涉及三个关键技术点：</p><ol><li><strong>汇编启动代码（start.S）</strong>——处理器复位后的第一段可执行代码</li><li><strong>链接脚本（u-boot.lds）</strong>——定义代码和数据在内存中的精确布局</li><li><strong>C运行环境构建</strong>——为高级语言执行创建必要的底层支撑</li>]]></content>
+      
+      
+      <categories>
+          
+          <category> IMX6ULL </category>
+          
+          <category> QEMU </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+            <tag> QEMU </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>从零开始逐步实现U-Boot(一)——Kconfig/Kbuild配置构建系统搭建与主机程序编译</title>
+      <link href="/2026/03/09/U-Boot%E5%AD%A6%E4%B9%A0/%E4%BB%8E%E9%9B%B6%E5%BC%80%E5%A7%8B%E9%80%90%E6%AD%A5%E5%AE%9E%E7%8E%B0U-Boot(%E4%B8%80)/"/>
+      <url>/2026/03/09/U-Boot%E5%AD%A6%E4%B9%A0/%E4%BB%8E%E9%9B%B6%E5%BC%80%E5%A7%8B%E9%80%90%E6%AD%A5%E5%AE%9E%E7%8E%B0U-Boot(%E4%B8%80)/</url>
+      
+        <content type="html"><![CDATA[<blockquote><p>系列：从零开始逐步实现U-Boot</p><p>目标平台：<em>NXP i.MX6ULL (ARM Cortex-A7)</em></p><p>QEMU mcimx6ul-evk模拟板 或 正点原子IMX6ULL-MINI板</p></blockquote><p>U-Boot（Universal Bootloader）作为嵌入式系统的核心组件，其构建系统的演进经历了从早期的纯 Makefile 到引入 Linux 内核式 <strong>Kconfig&#x2F;Kbuild</strong> 系统的转变。这一转变极大地增强了代码的可配置性和模块化。</p><p>本篇将聚焦于 <strong>Kconfig 与 Kbuild 基础架构</strong> 的简化版本搭建，这是实现可视化配置（<code>make menuconfig</code>）和自动化编译的基础。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> IMX6ULL </category>
+          
+          <category> QEMU </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+            <tag> QEMU </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>C++引用</title>
+      <link href="/2026/03/08/%E7%BC%96%E7%A8%8B/C++/C++%E5%BC%95%E7%94%A8/"/>
+      <url>/2026/03/08/%E7%BC%96%E7%A8%8B/C++/C++%E5%BC%95%E7%94%A8/</url>
+      
+        <content type="html"><![CDATA[<p>在C++的世界中，<strong>引用（Reference）</strong> 是一个看似简单却极其深邃的语言特性。引用（reference）是C++对C语言的重要扩充。引用和指针具有相似的功能，都可以让你间接引用其他对象，对目标变量的内容进行直接操作。</p><p>在实际工程开发中，引用无处不在——函数参数传递、运算符重载、范围for循环、智能指针的使用，几乎每一个C++程序员每天都在与引用打交道。</p><p>然而，许多初学者对引用的理解仅停留在”变量的别名”这一层面，这种浅尝辄止的认知在面对复杂的工程代码或刁钻的面试题时往往捉襟见肘。本文将从最基础的概念出发，层层递进，带你真正吃透C++引用的方方面面。</p><h1 id="一、什么是引用"><a href="#一、什么是引用" class="headerlink" title="一、什么是引用"></a>一、什么是引用</h1>]]></content>
+      
+      
+      <categories>
+          
+          <category> C++ </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> C++ </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>UART：从零基础到掌握（二）——IMX6ULL的UART详解</title>
+      <link href="/2026/03/03/ARM/IMX6ULL%E7%9A%84UART%E8%AF%A6%E8%A7%A3/"/>
+      <url>/2026/03/03/ARM/IMX6ULL%E7%9A%84UART%E8%AF%A6%E8%A7%A3/</url>
+      
+        <content type="html"><![CDATA[<blockquote><p>以NXP I.MX6ULL 处理器与正点原子 I.MX6U-Mini 开发板为例</p></blockquote><p>上一篇文章介绍了UART协议的基本理论。本篇我们将去了解I.MX6U芯片内部的UART硬件控制器是如何实现这个协议的，并把理论付诸实践，在i.MX6ULL芯片上驱动UART。</p><h1 id="一、从原理图读懂硬件连接"><a href="#一、从原理图读懂硬件连接" class="headerlink" title="一、从原理图读懂硬件连接"></a>一、从原理图读懂硬件连接</h1><p>学习嵌入式开发，阅读原理图是一项不可或缺的基本技能。原理图（Schematic）是硬件工程师的”图纸”，它描述了电路板上每个芯片、电阻、电容等元件之间的电气连接关系。对于软件工程师来说，原理图告诉你”哪个引脚连到了哪里”——这直接决定了你在代码中应该配置哪个GPIO引脚、使用哪个UART模块。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> ARM </category>
+          
+          <category> IMX6ULL </category>
+          
+          <category> UART </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> ARM </tag>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> UART </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>UART：从零基础到掌握（一）——UART协议</title>
+      <link href="/2026/03/02/ARM/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3UART/"/>
+      <url>/2026/03/02/ARM/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3UART/</url>
+      
+        <content type="html"><![CDATA[<blockquote><p>以NXP I.MX6ULL 处理器与正点原子 I.MX6U-Mini 开发板为例</p></blockquote><h1 id="一、通信的基本概念"><a href="#一、通信的基本概念" class="headerlink" title="一、通信的基本概念"></a>一、通信的基本概念</h1><p>在学习UART之前，必须首先建立对”通信”这一概念的完整认知。所谓通信，是指两个或多个设备之间按照预先约定的规则交换数据的过程。这里有两个关键词需要你牢记：<strong>数据</strong>和<strong>规则</strong>。数据是要传递的内容，规则是传递的方法，后者在工程领域有一个专业术语——<strong>通信协议（Protocol）</strong>。</p><h3 id="1-1-并行通信与串行通信"><a href="#1-1-并行通信与串行通信" class="headerlink" title="1.1 并行通信与串行通信"></a>1.1 并行通信与串行通信</h3><p>计算机内部，所有数据本质上都是二进制位（bit）的组合。当我们需要将一个8位的数据（例如 <code>0x5A</code>，即二进制 <code>01011010</code>）从设备A传送到设备B时，有两种根本不同的物理传输方式。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> ARM </category>
+          
+          <category> IMX6ULL </category>
+          
+          <category> UART </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> ARM </tag>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> UART </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>ARM仿真开发环境——QEMU虚拟化平台搭建</title>
+      <link href="/2026/03/01/QEMU/ARM%E4%BB%BF%E7%9C%9F%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83_QEMU%E8%99%9A%E6%8B%9F%E5%8C%96%E5%B9%B3%E5%8F%B0%E6%90%AD%E5%BB%BA/"/>
+      <url>/2026/03/01/QEMU/ARM%E4%BB%BF%E7%9C%9F%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83_QEMU%E8%99%9A%E6%8B%9F%E5%8C%96%E5%B9%B3%E5%8F%B0%E6%90%AD%E5%BB%BA/</url>
+      
+        <content type="html"><![CDATA[<h1 id="一、QEMU虚拟化平台"><a href="#一、QEMU虚拟化平台" class="headerlink" title="一、QEMU虚拟化平台"></a>一、QEMU虚拟化平台</h1><h2 id="1-1-为什推荐QEMU"><a href="#1-1-为什推荐QEMU" class="headerlink" title="1.1 为什推荐QEMU"></a>1.1 为什推荐QEMU</h2><p>在嵌入式与操作系统开发领域，ARM 架构凭借其<strong>高性能</strong>与<strong>低功耗</strong>的显著优势，已成为现代计算设备的核心技术基础——从物联网传感器、智能手机、汽车电子，到数据中心服务器，ARM 无处不在。</p><p>然而，许多开发者在学习 ARM 体系与操作系统开发时会遇到很多问题，第一个拦在面前的障碍往往不是代码本身，而是<strong>开发环境</strong>。翻开任何一本嵌入式书籍，前几章几乎都在教你买板子、接串口、装驱动、配烧录工具。还没碰到一行代码，时间和精力已经耗去大半。</p><p>一块主流的ARM开发板，再加上电源、串口线、SD卡、JTAG调试器……整套下来，还没开始学，钱包先瘦了一圈。对于学生和刚入行的工程师来说，这不是一个可以轻松做出的决定。</p><p>真实开发板当然有它不可替代的价值，但在<strong>源码学习和原理分析</strong>这个阶段，它的短板明显：</p><ul><li><strong>开发板成本高昂</strong>：一块功能完整的 ARM 开发板动辄数百上千元</li><li><strong>调试环境复杂</strong>：需要配置 JTAG 调试器、串口线、电源等一系列硬件</li><li><strong>实验破坏性风险</strong>：误操作可能导致硬件损坏，试错成本极高</li><li><strong>平台绑定性强，环境难以复现和共享</strong>：代码往往与特定开发板深度耦合，难以迁移</li></ul><p>QEMU是一个开源的全系统模拟器，它可以模拟完整的ARM处理器以及外设，让代码以为自己运行在一块真实的硬件上。更重要的是，QEMU内置了GDB调试桩——这意味着你可以<strong>在U-Boot执行第一条指令之前就断下来</strong>，逐条指令单步执行，实时观察每一个寄存器、每一块内存的变化。这种调试深度，即便是价格不菲的JTAG调试器也很难轻松做到。</p><p>QEMU几乎完美地解决了上述所有问题：</p><table><thead><tr><th>维度</th><th>真实开发板</th><th>QEMU</th></tr></thead><tbody><tr><td>成本</td><td>数百至数千元</td><td>免费</td></tr><tr><td>环境搭建</td><td>串口、电源、烧录工具</td><td>一条命令启动</td></tr><tr><td>编译→运行周期</td><td>分钟级</td><td>秒级</td></tr><tr><td>调试能力</td><td>依赖JTAG，门槛高</td><td>内置GDB Server，直接单步</td></tr><tr><td>环境一致性</td><td>因人而异</td><td>完全可复现</td></tr><tr><td>状态快照</td><td>不支持</td><td>支持存档&#x2F;恢复</td></tr></tbody></table><h1 id="1-2-为什么选择mcimx6ul-evk"><a href="#1-2-为什么选择mcimx6ul-evk" class="headerlink" title="1.2 为什么选择mcimx6ul-evk"></a>1.2 为什么选择mcimx6ul-evk</h1><p>选择<code>mcimx6ul-evk</code>（NXP i.MX6UltraLite EVK）作为QEMU的目标机器，原因有三：</p><ol><li><strong>i.MX6UL资料生态好</strong>。大量中文教程、开发板、培训课程都基于这颗芯片，社区资料丰富，遇到问题容易找到答案。</li><li><strong>QEMU对i.MX6UL的支持相对完善</strong>。与 I.MX6ULL Mini 使用相同的 SoC。CPU核心（Cortex-A7）、中断控制器（GIC）、定时器（GPT&#x2F;EPIT）、UART等关键外设均已建模，足以支撑U-Boot从上电到引导内核的完整流程。</li><li><strong>U-Boot主线对i.MX6UL的支持成熟稳定</strong>。我们可以直接使用U-Boot官方源码，无需依赖厂商私有的BSP补丁，最大程度保证代码的通用性和可读性。</li></ol><h1 id="二、安装QEMU"><a href="#二、安装QEMU" class="headerlink" title="二、安装QEMU"></a>二、安装QEMU</h1><blockquote><p>主机系统：Ubuntu24.04</p><p>QEMU版本：QEMU-10.2.1</p><p>交叉编译工具链：gcc-arm-none-eabi</p><p>调试器（GDB）：GDB是一个强大的调试工具，可以与QEMU配合使用</p></blockquote><h2 id="2-1-使用apt-get命令安装"><a href="#2-1-使用apt-get命令安装" class="headerlink" title="2.1. 使用apt-get命令安装"></a>2.1. 使用apt-get命令安装</h2><p>大多数 Linux 发行版已经为 QEMU（或 KVM）提供了二进制包。Ubuntu可以使用下面命令安装：</p><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">sduo <span class="token function">apt-get</span> <span class="token function">install</span> qemu-system<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre><p>这种方式安装的QEMU版本一般不是最新的，Ubuntu20.04提供的QEMU版本为4.2.1，Ubuntu24.04提供的QEMU版本为8.2.2。</p><p>如果需要更新的版本的话，需要采用下载源码本地编译安装的办法。</p><h3 id="2-2-QEMU源码安装"><a href="#2-2-QEMU源码安装" class="headerlink" title="2.2 QEMU源码安装"></a>2.2 QEMU源码安装</h3><p><strong>（1）下载源码</strong></p><p><a href="https://www.qemu.org/">QEMU官网</a>下载地址：<a href="https://www.qemu.org/download/">https://www.qemu.org/download/</a></p><p>qemu所有releases版本下载地址：<a href="https://download.qemu.org/">https://download.qemu.org/</a></p><p>终端使用命令下载：</p><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">wget</span> https://download.qemu.org/qemu-10.2.1.tar.xz<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre><p>解压命令：<code>tar xvJf qemu-9.2.2.tar.xz [-C 指定路径]</code></p><p>git克隆下载QEMU</p><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">git</span> clone https://gitlab.com/qemu-project/qemu.git<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre><p><strong>（2）安装编译依赖</strong><br>参考文档：<a href="https://wiki.qemu.org/Hosts/Linux">https://wiki.qemu.org/Hosts/Linux</a></p><p>必要依赖：</p><ul><li>git， 版本管理器</li><li>glib2.0-dev，这会自动包含 zlib1g-dev</li><li>libfdt-devel</li><li>Python3 pip、tomli、setuptools 和 wheel</li><li>Flex（词法分析器生成器） Bison（语法分析器生成器）</li></ul><p>对于Ubuntu， 所有必要的额外软件包都可以如下安装：</p><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">sudo</span> <span class="token function">apt</span> update<span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> <span class="token function">git</span> build-essential libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev ninja-build python3-pip python3-setuptools python3-tomli python3-wheel bison flex<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre><p>推荐额外依赖：</p><ul><li>git-email，用于发送补丁</li><li>libsdl2-dev （libsdl2-devel），基于 SDL 的图形用户界面需要</li><li>libgtk-3-dev （gtk3-devel），用于简单的 UI 而不是 VNC</li><li>libvte-dev （vte291-devel），用于通过 GTK 接口访问 QEMU 监视器和串行&#x2F;控制台设备</li><li>libcapstone-dev （capstone-devel），用于反汇编 CPU 指令</li></ul><p>上述列表远非完整。为了最大化代码覆盖，应尽可能启用 QEMU 功能。 运行configure时，你应该会看到很多行是“YES”，只有少数几行是“NO”。</p><p>对于Ubuntu， 大多数推荐的额外软件包以实现最大代码覆盖，可以安装如下：</p><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> git-email<span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> libaio-dev libbluetooth-dev libcapstone-dev libbrlapi-dev libbz2-dev<span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> libcap-ng-dev libcurl4-gnutls-dev libgtk-3-dev<span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> libibverbs-dev libjpeg8-dev libncurses5-dev libnuma-dev<span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> librbd-dev librdmacm-dev<span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> libsasl2-dev libsdl2-dev libseccomp-dev libsnappy-dev libssh-dev<span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> libvde-dev libvdeplug-dev libvte-2.91-dev libxen-dev liblzo2-dev<span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> valgrind xfslibs-dev libssl-dev<span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> libnfs-dev libiscsi-dev<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre><p>注意：</p><p>qemu9.0之后的版本要求： </p><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">glib<span class="token operator">>=</span><span class="token number">2.66</span>python<span class="token operator">>=</span><span class="token number">3.8</span>Ubuntu20.04在不升级glib和python3的情况下可以安装较新的9.0.x版本查看glib版本：pkg-config <span class="token parameter variable">--modversion</span> glib-2.0<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre><p><strong>（3）编译</strong></p><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token number">1</span>. 进入qemu源码目录<span class="token number">2</span>. <span class="token function">mkdir</span> build<span class="token number">3</span>. <span class="token builtin class-name">cd</span> build<span class="token number">4</span>. <span class="token punctuation">..</span>/configure --target-list<span class="token operator">=</span>arm-softmmu<span class="token comment"># --target-list=arm-softmmu 表示只编译 ARM 全系统模拟器，跳过大量不需要的目标(如x86_64,aarch64等)</span><span class="token comment"># 不使用 --target-list，会编译安装各种平台的Qemu模拟器（aarch64，riscv64等）</span><span class="token comment"># 不指定 --prefix，一般会安装到 /usr/local</span><span class="token number">5</span>. <span class="token function">make</span> -j<span class="token variable"><span class="token variable">$(</span>nproc<span class="token variable">)</span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre><p>make完成后，如果不想安装，可以在build路径下使用.&#x2F;qemu-system-arm执行qemu。</p><p>注意：Ubuntu24.04下，使用默认configure，在make时可能会遇到下面错误：</p><pre class="line-numbers language-none"><code class="language-none">...during RTL pass: vartrack..&#x2F;linux-user&#x2F;linuxload.c: In function ‘memcpy_to_target’:..&#x2F;linux-user&#x2F;linuxload.c:24:1: internal compiler error: Segmentation fault...Please submit a full bug report, with preprocessed source (by using -freport-bug).Please include the complete backtrace with any bug report.See &lt;file:&#x2F;&#x2F;&#x2F;usr&#x2F;share&#x2F;doc&#x2F;gcc-13&#x2F;README.Bugs&gt; for instructions.ninja: build stopped: subcommand failed.make: *** [Makefile:170: run-ninja] Error 1<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre><p>这是 <strong>GCC 13 自身崩溃了</strong>（Internal Compiler Error，简称 ICE）。Ubuntu 24.04 默认搭载的 <code>gcc-13</code> 在特定优化级别下编译某些代码时会触发这个已知 bug。</p><p>解决方法可以是升级GCC到14；或者最省事的方法是指定目标只编译arm，也不会触发编译sh4eb-linux-user目标报错。</p><p><strong>（4）安装</strong><br>make运行结束后使用以下命令安装：<br><code>sudo make install</code></p><p>检查qemu版本：<br><code>qemu-system-arm --version</code></p><p>查看支持的开发板<br><code>qemu-system-arm -M help</code></p><h2 id="2-3-删除QEMU"><a href="#2-3-删除QEMU" class="headerlink" title="2.3 删除QEMU"></a>2.3 删除QEMU</h2><p>源码编译安装的qemu需要手动卸载：</p><pre class="line-numbers language-none"><code class="language-none">可执行文件默认放在&#x2F;usr&#x2F;local&#x2F;bin 库文件默认存放在&#x2F;usr&#x2F;local&#x2F;libexec共享文件默认存放在&#x2F;usr&#x2F;local&#x2F;share 文档在 &#x2F;usr&#x2F;local&#x2F;share&#x2F;doc&#x2F;qemu&#x2F;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre><p>卸载源码只需将上面四个目录中相关文件或者目录删除</p><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">sudo</span> <span class="token function">rm</span> <span class="token parameter variable">-rf</span> /usr/local/bin/qemu-* <span class="token function">sudo</span> <span class="token function">rm</span> <span class="token parameter variable">-rf</span> /usr/local/libexec/qemu-bridge-helper <span class="token function">sudo</span> <span class="token function">rm</span> <span class="token parameter variable">-rf</span> /usr/local/share/qemu<span class="token function">sudo</span> <span class="token function">rm</span> <span class="token parameter variable">-rf</span> /usr/local/share/doc/qemu<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre><h1 id="三、交叉编译工具安装"><a href="#三、交叉编译工具安装" class="headerlink" title="三、交叉编译工具安装"></a>三、交叉编译工具安装</h1><p>在一种计算机环境中运行的编译程序，能编译出在另外一种环境下运行的代码，我们就称这种编译器支持交叉编译，这个编译过程就称为交叉编译。</p><p>简单地说，就是在一个平台上生成另一个平台上的可执行代码。这里需要注意的是所谓平台，实际上包含两个概念：体系结构（Architecture）和操作系统（Operating System）。同一个体系结构可以运行不同的操作系统；同样，同一个操作系统也可以在不同的体系结构上运行。</p><p>要进行交叉编译，我们需要在主机平台上安装对应的交叉编译工具链，然后用这个交叉编译工具链编译我们的源代码，最终生成可在目标平台上运行的代码。例如适用于ARM平台的交叉编译工具链arm-linux-gcc（arm-none-eabi-gcc）。</p><h2 id="3-1-apt-get命令安装"><a href="#3-1-apt-get命令安装" class="headerlink" title="3.1 apt-get命令安装"></a>3.1 apt-get命令安装</h2><p>使用 Ubuntu 自带的 apt 工具安装 gcc-arm-none-eabi。</p><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> gcc-arm-none-eabi<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre><p>安装完成后，输入命令获取版本号。</p><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">arm-none-eabi-gcc <span class="token parameter variable">--version</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre><p><strong>为什么选 <code>arm-none-eabi</code> 而不是 <code>arm-linux-gnueabihf</code>？</strong></p><ul><li><code>arm-none-eabi</code>：面向裸机（bare-metal）开发，不依赖任何操作系统的 C 库</li><li><code>arm-linux-gnueabihf</code>：面向 Linux 应用开发，依赖 glibc</li></ul><p>所以做裸机开发，选择前者。</p><p>这种方法安装的工具链不包含arm-none-eabi-gdb调试工具，建议去官网下载手动安装。</p><h2 id="3-2-手动下载安装"><a href="#3-2-手动下载安装" class="headerlink" title="3.2 手动下载安装"></a>3.2 手动下载安装</h2><p>Arm GNU 工具链下载 – Arm 开发者](<a href="https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads">https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads</a>)<br>下载之后解压到指定目录：</p><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">sudo</span> <span class="token function">mkdir</span> /opt/tool<span class="token function">sudo</span> <span class="token function">tar</span> <span class="token parameter variable">-jxf</span> gcc-arm-none-eabi-xxxx-x86_64-linux.tar.bz2 <span class="token parameter variable">-C</span> /opt/tool/<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre><p>添加到环境变量：</p><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token builtin class-name">export</span> <span class="token assign-left variable"><span class="token environment constant">PATH</span></span><span class="token operator">=</span><span class="token environment constant">$PATH</span>:/opt/tool/gcc-arm-none-eabi-xxxx/bin<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre><p>命令 “<code>PATH=$PATH:路径</code>”可以把这个路径加入环境变量，但是退出这个命令行窗口就失效了。</p><p>永久有效配置如下：</p><p>在&#x2F;home&#x2F;用户名下&#x2F;.bashrc文件末尾中添加下面的内容：<br><code>export PATH=$PATH:/opt/tool/gcc-arm-none-eabi-xxxx/bin</code>，然后保存。</p><p>最后执行：<code>source .bashrc</code> 使其生效。</p><p>输入命令获取版本号：arm-none-eabi-gcc –version，验证安装成功。</p><h2 id="3-3-gdb调试工具"><a href="#3-3-gdb调试工具" class="headerlink" title="3.3 gdb调试工具"></a>3.3 gdb调试工具</h2><p>我们可以使用工具链自带的gdb来调试代码。</p><p>下面推荐一个好用的gdb工具：gdb-multiarch</p><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">sudo</span> <span class="token function">apt</span> <span class="token function">install</span> gdb-multiarch<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre><p>使用方法：</p><pre class="line-numbers language-none"><code class="language-none">gdb-multiarch --tui u-boot(gdb) set architecture arm(gdb) target remote localhost:1234<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre><p>至此，开发环境和交叉编译工具链配置等相关准备工作已完成。</p><p>使用下面的命令可以在qemu运行我们的裸机程序：</p><pre class="line-numbers language-none"><code class="language-none">qemu-system-arm -M mcimx6ul-evk -cpu cortex-a7 -m 512M -kernel u-boot<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre><hr><p>QEMU 帮我们屏蔽了这些硬件初始化的复杂性，让我们可以<strong>专注于理解核心概念</strong>。等我们对 ARM 体系结构有了足够的理解后，再去攻克这些硬件细节，就会轻松很多。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> ARM </category>
+          
+          <category> QEMU </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> ARM </tag>
+            
+            <tag> QEMU </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>ARM：从裸机到操作系统实现</title>
+      <link href="/2026/03/01/ARM/ARM%EF%BC%9A%E4%BB%8E%E8%A3%B8%E6%9C%BA%E5%88%B0%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/"/>
+      <url>/2026/03/01/ARM/ARM%EF%BC%9A%E4%BB%8E%E8%A3%B8%E6%9C%BA%E5%88%B0%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/</url>
+      
+        <content type="html"><![CDATA[<p>本专栏记录了一个完整的学习实践历程：<strong>从零开始构建一款嵌入式操作系统</strong>。</p><p>我们将从最底层的裸机汇编启动代码开始，理解 BootLoader 的工作原理，逐步实现外设驱动、中断处理、内存管理、进程调度、文件系统等操作系统核心组件，最终构建起一个功能完备的嵌入式操作系统内核，并深入理解操作系统的移植与内核开发技术。</p><h1 id="一、为什么要做这个专栏？"><a href="#一、为什么要做这个专栏？" class="headerlink" title="一、为什么要做这个专栏？"></a>一、为什么要做这个专栏？</h1><p>在嵌入式与操作系统开发领域，ARM 架构凭借其<strong>高性能</strong>与<strong>低功耗</strong>的显著优势，已成为现代计算设备的核心技术基础——从物联网传感器、智能手机、汽车电子，到数据中心服务器，ARM 无处不在。</p><p>然而，许多开发者在学习 ARM 体系与操作系统开发时，常常遭遇三大困境：</p><p>🚧 <strong>困境一：硬件门槛高</strong></p><ul><li><strong>开发板成本高昂</strong>：一块功能完整的 ARM 开发板动辄数百上千元</li><li><strong>调试环境复杂</strong>：需要配置 JTAG 调试器、串口线、电源等一系列硬件</li><li><strong>实验破坏性风险</strong>：误操作可能导致硬件损坏，试错成本极高</li><li><strong>平台绑定性强</strong>：代码往往与特定开发板深度耦合，难以迁移</li></ul><p>🔗 <strong>困境二：知识链路断裂</strong></p><ul><li><strong>裸机开发与操作系统脱节</strong>：硬件寄存器操作与 OS 内核开发被割裂为两个独立领域</li><li><strong>缺乏系统性学习路径</strong>：从”点亮 LED”到”实现调度器”之间存在巨大的知识鸿沟</li><li><strong>理论与实践脱节</strong>：教材讲原理，实践靠摸索，难以建立完整的技术体系</li></ul><p>📚 <strong>困境三：学习资源碎片化</strong></p><ul><li>裸机教程止步于驱动层，操作系统教程假设底层已就绪</li><li>开源 OS（如 Linux&#x2F;RT-Thread）代码量庞大，初学者难以切入</li><li>缺少一个<strong>从 0 到 1</strong> 的完整实践案例</li></ul><p>借用 <strong>QEMU 虚拟化技术</strong>为核心工具，打破硬件实验的物理限制，构建一条<strong>从底层寄存器到完整操作系统的连贯学习路径</strong>。</p><h1 id="二、专栏核心优势"><a href="#二、专栏核心优势" class="headerlink" title="二、专栏核心优势"></a>二、专栏核心优势</h1><p><strong>🆓 零硬件成本</strong></p><ul><li>无需购买任何开发板，一台普通 PC 即可完成所有实验</li><li>虚拟硬件”永不损坏”，可以大胆试错</li><li>跨平台支持（Linux&#x2F;macOS&#x2F;Windows），不受硬件平台限制</li></ul><p><strong>🔬 完美的调试环境</strong></p><ul><li>QEMU + GDB 组合提供寄存器级精细调试能力</li><li>可随时暂停、单步执行、查看内存和寄存器状态</li><li>支持时间回溯（结合快照功能），调试效率远超真实硬件</li></ul><p><strong>🎯 知识体系的连贯性</strong></p><ul><li>理论与实践深度融合</li><li>渐进式复杂度</li><li>使用真实的 ARM Cortex-A7 处理器模型（与正点原子等开发板一致）</li><li>编写的代码可无缝迁移到真实硬件</li></ul><h1 id="三、技术栈"><a href="#三、技术栈" class="headerlink" title="三、技术栈"></a>三、技术栈</h1><table><thead><tr><th>层次</th><th>技术</th></tr></thead><tbody><tr><td><strong>处理器</strong></td><td>ARM Cortex-A7（ARMv7-A 架构）</td></tr><tr><td><strong>硬件平台</strong></td><td>正点原子 I.MX6ULL Mini 开发板（物理板）</td></tr><tr><td><strong>仿真平台</strong></td><td>QEMU <code>mcimx6ul-evk</code> 机型</td></tr><tr><td><strong>开发语言</strong></td><td>C + ARM 汇编</td></tr><tr><td><strong>工具链</strong></td><td>GCC <code>arm-none-eabi-</code> 交叉编译器</td></tr><tr><td><strong>调试工具</strong></td><td>QEMU + GDB</td></tr><tr><td><strong>构建系统</strong></td><td>Makefile</td></tr><tr><td><strong>版本控制</strong></td><td>Git</td></tr></tbody></table><h1 id="四、写在最后"><a href="#四、写在最后" class="headerlink" title="四、写在最后"></a>四、写在最后</h1><p>这不是一本教科书的复述，也不是一份 API 手册的罗列。这是一次<strong>从 CPU 上电第一条指令到完整操作系统的探索之旅</strong>。</p><p>在这个过程中，你会：</p><ul><li>看到一个字符如何从内存流向串口</li><li>理解中断为什么能让 CPU”停下手头的活”</li><li>见证虚拟内存如何让每个进程都以为自己独占 4GB 空间</li><li>体会调度器如何在 1 毫秒内切换几十个任务</li></ul><p>当你完成最后一篇文章，回头看第一个只有几十行的裸机程序时，你会惊讶于自己的成长——<strong>你已经拥有了从零构建一个操作系统的能力</strong>。</p><blockquote><p><strong>“纸上得来终觉浅，绝知此事要躬行。”</strong><br>让我们从第一行汇编代码开始，一起探索 ARM 世界的无限可能。</p></blockquote>]]></content>
+      
+      
+      <categories>
+          
+          <category> ARM </category>
+          
+          <category> 裸机 </category>
+          
+          <category> 操作系统 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> ARM </tag>
+            
+            <tag> BootLoader </tag>
+            
+            <tag> 操作系统 </tag>
+            
+            <tag> 裸机 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>深入理解GPIO和IOMUX控制器</title>
+      <link href="/2026/02/27/ARM/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3GPIO%E5%92%8CIOMUX%E6%8E%A7%E5%88%B6%E5%99%A8/"/>
+      <url>/2026/02/27/ARM/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3GPIO%E5%92%8CIOMUX%E6%8E%A7%E5%88%B6%E5%99%A8/</url>
+      
+        <content type="html"><![CDATA[<blockquote><p>以NXP I.MX6ULL处理器与正点原子I.MX6U-Mini开发板为例</p></blockquote><h1 id="一、基本概念"><a href="#一、基本概念" class="headerlink" title="一、基本概念"></a>一、基本概念</h1><h2 id="1-1-什么是GPIO"><a href="#1-1-什么是GPIO" class="headerlink" title="1.1 什么是GPIO"></a>1.1 什么是GPIO</h2><p>GPIO，全称是General-Purpose Input&#x2F;Output，翻译为”通用输入输出端口”，是微处理器与外部世界进行最基本数字信号交互的接口。</p><p>当你拿起一颗处理器芯片，你会看到它的封装底部有数百个微小的焊球，这些焊球就是芯片与外部世界沟通的物理通道。每一个焊球在芯片内部都连接着一根导线，这根导线延伸到芯片内部的某个功能电路上。这些焊球，在技术文档中被称为**”引脚”（Pin）<strong>或者</strong>“焊盘”（Pad）**。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> ARM </category>
+          
+          <category> IMX6ULL </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> ARM </tag>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+            <tag> IOMUX </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>ARM时钟配置流程——基于IMX6ULL时钟系统(二)</title>
+      <link href="/2026/02/14/ARM/IMX6ULL%E6%97%B6%E9%92%9F%E7%B3%BB%E7%BB%9F2/"/>
+      <url>/2026/02/14/ARM/IMX6ULL%E6%97%B6%E9%92%9F%E7%B3%BB%E7%BB%9F2/</url>
+      
+        <content type="html"><![CDATA[<p>上一篇介绍了 i.MX6ULL 处理器的时钟管理系统。本篇将梳理IMX6ULL芯片内部复杂的时钟树，理解其从晶振到PLL、再到各模块分频的完整路径。介绍相关寄存器，并一步步完成关键时钟的配置：</p><ul><li><strong>解读硬件设计</strong>：分析正点原子IMX6ULL-Mini开发板上的时钟源电路，将原理图与芯片手册对应。</li><li><strong>掌握配置方法</strong>：学习如何查阅约4000页的《i.MX6ULL参考手册》，定位关键的时钟控制（CCM）寄存器，理解其每一位的含义。</li><li><strong>熟悉配置流程</strong>：从最根本的时钟源使能、PLL配置，到外设时钟门控与分频，我们将一步步推导出配置序列。</li></ul><p>参考资料：</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> ARM </category>
+          
+          <category> IMX6ULL </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> ARM </tag>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>ARM时钟配置流程——基于IMX6ULL时钟系统(一)</title>
+      <link href="/2026/02/14/ARM/IMX6ULL%E6%97%B6%E9%92%9F%E7%B3%BB%E7%BB%9F/"/>
+      <url>/2026/02/14/ARM/IMX6ULL%E6%97%B6%E9%92%9F%E7%B3%BB%E7%BB%9F/</url>
+      
+        <content type="html"><![CDATA[<p>上一篇我们探讨了<a href="https://mp.weixin.qq.com/s/Hsc_g-jGNUTbHr7sper3yw">嵌入式ARM时钟系统</a>的核心概念，理解了时钟如同芯片的“脉搏”，为处理器、总线和外设提供有序的工作节奏。如果你对时钟系统相关的基本概念都还不清楚可以先去看上一篇的时钟基础内容，然后再来学习本篇。</p><p>基于<strong>正点原子IMX6ULL-Mini开发板</strong>及其搭载的 <strong>NXP i.MX6ULL 处理器</strong>，本篇内容为 IMX6ULLRM 第10章中 IMX6ULL 时钟管理系统的介绍。</p><p>参考资料：</p><ul><li>《i.MX6ULL Applications Processor Reference Manual》（IMX6ULLRM）</li><li>《正点原子IMX6ULL_CORE_V2.0(核心板原理图)》</li>]]></content>
+      
+      
+      <categories>
+          
+          <category> ARM </category>
+          
+          <category> IMX6ULL </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> ARM </tag>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>嵌入式ARM时钟系统</title>
+      <link href="/2026/02/06/ARM/ARM%E6%97%B6%E9%92%9F%E7%B3%BB%E7%BB%9F/"/>
+      <url>/2026/02/06/ARM/ARM%E6%97%B6%E9%92%9F%E7%B3%BB%E7%BB%9F/</url>
+      
+        <content type="html"><![CDATA[<h1 id="一、时钟信号"><a href="#一、时钟信号" class="headerlink" title="一、时钟信号"></a>一、时钟信号</h1><p>时钟系统是嵌入式系统的核心部分。ARM时钟系统，通常指的是微控制器或微处理器中的时钟树（Clock Tree）及其管理单元。这些时钟系统为芯片内部的各个模块（如CPU、总线、外设等）提供时钟信号，使得它们能够同步工作。</p><h2 id="1-1-时钟信号的本质"><a href="#1-1-时钟信号的本质" class="headerlink" title="1.1 时钟信号的本质"></a>1.1 时钟信号的本质</h2><p>在电子世界中，<strong>时钟信号是一种周期性变化的电压信号</strong>，在高电平和低电平之间不断切换：</p><p><img src="/2026/02/06/ARM/ARM%E6%97%B6%E9%92%9F%E7%B3%BB%E7%BB%9F/clk.png" alt="clk"></p><p>相关概念：</p><ul><li><p><strong>周期 (Period)</strong> ：完成一次高低变化所需的时间。</p><p>单位：s（秒）</p><p>公式：周期(T) &#x3D; 1 &#x2F; 频率(f)</p></li><li><p><strong>频率 (Frequency)</strong> ：每秒钟时钟信号振荡的次数（每秒钟时钟信号变化的次数）。</p><p>单位：Hz（赫兹）、KHz（千赫）、MHz（兆赫）、GHz（吉赫）<br>换算：1GHz &#x3D; 1000MHz &#x3D; 1,000,000KHz &#x3D; 1,000,000,000Hz<br>1MHz &#x3D; 每秒振荡 1,000,000 次 ，即1秒内有1,000,000个时钟周期(T)。</p></li><li><p><strong>占空比 (Duty Cycle)</strong> ：高电平时间占整个周期的比例。</p><p>公式：占空比 &#x3D; 高电平时间 &#x2F; 周期 × 100%</p><p>标准时钟：通常是50%占空比（高低电平各占一半）。</p></li><li><p><strong>上升沿(Rising Edge)与下降沿(Falling Edge)</strong></p><p>上升沿：时钟信号从低电平变为高电平的瞬间。</p><p>下降沿：时钟信号从高电平变为低电平的瞬间。</p><p>大多数数字电路在上升沿采样数据（同步逻辑）</p></li></ul><h2 id="1-2-时钟的作用和控制意义"><a href="#1-2-时钟的作用和控制意义" class="headerlink" title="1.2 时钟的作用和控制意义"></a>1.2 时钟的作用和控制意义</h2><p>数字电路由大量”触发器“(Flip-Flop)组成，触发器需要时钟边沿触发。寄存器（包括外设的寄存器）的读写、外设功能的运行，都依赖时钟信号。所以想要使用任何外设，必须先确保该外设的时钟已经开启。这就是为什么配置外设前，首先要配置时钟的原因。 </p><p>时钟信号作为数字系统的”心跳”，其核心功能包括：</p><ul><li><strong>同步机制</strong>：确保数字电路各组件在特定时刻执行操作。</li><li><strong>时序参考</strong>：为数据传输和状态转换提供时间基准，保证数据在正确的时刻被采样和传输。</li><li><strong>功耗管理</strong>：通过时钟门控和频率调节实现能效优化。</li><li><strong>性能调节</strong>：动态调整运算速度适应不同工作负载。</li></ul><p>时钟控制的意义：</p><ul><li>时钟频率越高，每秒处理次数越多，芯片性能越强，但功耗也越大。</li><li>不同外设需要不同的时钟频率。如果使用统一的高频，不仅浪费功耗，而且有些外设无法工作在高频率。</li><li>通过时钟门控开关，不用的外设可以关闭时钟，节省功耗。</li></ul><h1 id="二、时钟系统基础概念"><a href="#二、时钟系统基础概念" class="headerlink" title="二、时钟系统基础概念"></a>二、时钟系统基础概念</h1><h2 id="2-1-时钟源-Clock-Source"><a href="#2-1-时钟源-Clock-Source" class="headerlink" title="2.1 时钟源 (Clock Source)"></a>2.1 时钟源 (Clock Source)</h2><p>产生原始时钟信号的器件或电路。</p><p>常见类型：晶振、RC振荡器、外部时钟输入</p><p><strong>晶体振荡器</strong>的基本工作原理是利用石英晶体的压电效应和谐振特性来产生恒定的频率。</p><p><strong>(1) 外部晶体振荡器（Crystal Oscillator）</strong></p><p>利用石英晶体的压电效应产生稳定频率振荡的器件。是<strong>高速外部时钟</strong>（<strong>HSE</strong> - High Speed External），常被标识为Xtal，Extenal Crystal Osillator。<br>常见频率：8MHz, 12MHz, 24MHz, 25MHz。<br>精度极高：±10<del>50ppm (百万分之10</del>50的误差)。对于 8MHz 晶振，误差约为 8MHz × 20ppm &#x3D; 160Hz。<br>应用：主时钟源，需要高精度的场合。</p><p><strong>(2) RC振荡器 (RC Oscillator)</strong></p><p>RC振荡器是一种通过电阻（R）和电容（C）构成选频网络实现自激振荡的反馈型电路。是<strong>高速内部时钟</strong>（<strong>HSI</strong> - High Speed Internal），在芯片内部。</p><p>常见频率：4MHz, 8MHz, 16MHz。<br>精度较低：±1%~5% (受温度影响大)。<br>优点：无需外部元件，启动快，成本低。<br>应用：对精度要求不高的场合，或作为备用时钟。</p><p><strong>(3) 低速外部晶振(LSE, Low Speed External)</strong></p><p>频率：32.768kHz (&#x3D; 2^15 Hz，便于分频得到1Hz)。<br>用途：实时时钟(RTC)、低功耗模式唤醒。<br>32768 ÷ 2^15 &#x3D; 1Hz，经过15次分频后正好是1Hz（1秒）。</p><p><strong>(4)低速RC振荡器 (LSI: Low Speed Internal)</strong></p><p>频率：约32kHz~40kHz (精度较差)。<br>优点：功耗极低，始终可用。<br>用途：看门狗定时器、低功耗唤醒。</p><h2 id="2-2-锁相环PLL-时钟倍频器"><a href="#2-2-锁相环PLL-时钟倍频器" class="headerlink" title="2.2 锁相环PLL- 时钟倍频器"></a>2.2 锁相环PLL- 时钟倍频器</h2><p>锁相环(PLL-Phase Locked Loop)是一种反馈系统，其中电压控制振荡器(VCO)和相位比较器相互连接，使得振荡器可以相对于参考信号维持恒定的相位角度。锁相环可用来从固定的低频信号生成稳定的输出高频信号等。</p><p>PLL的基本模型如下：</p><p><img src="/2026/02/06/ARM/ARM%E6%97%B6%E9%92%9F%E7%B3%BB%E7%BB%9F/pll.png"></p><p>鉴相器(PFD，Phase Frequency Detector)：比较输入信号和反馈信号的相位差，如果反馈信号慢了，输出”加速”信号，如果反馈信号快了，输出”减速”信号。</p><p>环路滤波器(LPF，Loop Filter)：将鉴相器的脉冲信号转换为平滑的直流电压，过滤高频噪声，提高系统稳定性。</p><p>压控振荡器(VCO，Voltage Controlled Oscillator)：根据输入电压产生对应频率的时钟。电压高→频率高，电压低→频率低，这是产生高频时钟的核心部件。</p><p>反馈分频器(Feedback Divider)：将VCO输出的高频信号降低N倍，然后反馈给鉴相器进行比较。</p><p><strong>倍频公式：输出频率 &#x3D; 参考频率 × N</strong></p><p>为什么需要PLL？</p><p>高频晶振价格昂贵，且电磁干扰大。晶振频率固定（如24MHz），但CPU需要几百MHz甚至GHz的高速时钟，外设也需要各种不同频率。较便宜的低频晶振通过PLL倍频可以获得各种高速频率。</p><h2 id="2-3-分频器-Divider-Prescaler"><a href="#2-3-分频器-Divider-Prescaler" class="headerlink" title="2.3 分频器(Divider &#x2F; Prescaler)"></a>2.3 分频器(Divider &#x2F; Prescaler)</h2><p>分频器将高频时钟降低到合适低频率的电路。</p><p>原理：每N个输入时钟周期输出1个时钟周期。</p><p>二分频示例：</p><p><img src="/2026/02/06/ARM/ARM%E6%97%B6%E9%92%9F%E7%B3%BB%E7%BB%9F/divider.png" alt="divider"></p><p>输出频率 &#x3D; 输入频率 ÷ 2（频率变为一半，周期变为两倍）</p><p>不同外设需要不同频率，所以我们使用分频器可以将高频率时钟分频到合适的频率供不同外设使用。</p><h2 id="2-4-时钟控制模块CCM"><a href="#2-4-时钟控制模块CCM" class="headerlink" title="2.4 时钟控制模块CCM"></a>2.4 时钟控制模块CCM</h2><p>时钟控制模块CCM(Clock Controller Module)为设计中的各类模块生成并控制时钟，同时管理低功耗模式。该模块利用可用时钟源来生成时钟根。</p><ul><li>时钟根生成逻辑(Clock root generation logic)：该子模块提供用于控制大部分<strong>次级时钟源配置</strong>的寄存器，包括主时钟源选择与时钟分频器。时钟根（clock roots）是指供给内核、系统总线（AXI、AHB、IPG）及所有其他片上外设的各个独立时钟，其中包括串行时钟、波特率时钟和特殊功能时钟。大多数时钟根针对特定模块而设计。</li><li>CCM 与 GPC、PMU 和 SRC 协同管理电源模式，即运行模式、等待模式和停止模式。外设时钟的门控在运行模式和等待模式下可编程配置。</li></ul><p>CCM 管理以下频率调节流程：</p><ul><li>ARM 内核时钟——可通过切换锁相环源（PLL 时钟切换）或调整分频比，实现“动态”频率调整，且不会中断时钟信号。</li><li>DDR 内存控制器时钟的切换。具体详见 MMDC 握手协议、自刷新及频率切换进入&#x2F;退出流程。</li><li>外设根时钟——通过可编程分频器调节。分频系数可动态修改，且不会导致时钟丢失。</li></ul><p>注意：</p><p>对于同步接口（如串行音频接口、视频与显示接口或通用串行接口（如 UART、CAN）），动态频率切换可能导致同步丢失，应避免此类操作。</p><h2 id="2-5-时钟门控-Clock-Gating"><a href="#2-5-时钟门控-Clock-Gating" class="headerlink" title="2.5 时钟门控(Clock Gating)"></a>2.5 时钟门控(Clock Gating)</h2><p>通过开关控制时钟是否传递到某个模块。</p><p><img src="/2026/02/06/ARM/ARM%E6%97%B6%E9%92%9F%E7%B3%BB%E7%BB%9F/clock_gate.png" alt="clock_gate"></p><p>Low Power Clock Gating unit(LPCG) 从 CCM 接收原始时钟，并将其划分为供各个模块使用的时钟分支。这些时钟分支均为独立门控时钟。</p><p>门控时钟的使能信号可来自三个来源：</p><ul><li><strong>来自 CCM 的时钟使能信号</strong>：该信号根据系统所处的功耗模式生成。针对每种功耗模式，均可通过软件配置 CCM 中的 CGR 位进行定义。</li><li><strong>来自对应功能模块的时钟使能信号</strong>：该信号由功能模块依据其内部逻辑产生。并非所有来自模块的使能信号都会被使用，且每个此类时钟使能信号均可通过 CCM 中的可编程位进行覆盖。</li><li><strong>来自复位控制器（SRC）的时钟使能信号</strong>：该信号在复位流程中完成时钟使能。</li></ul><p>不使用的外设关闭时钟，可以使功耗降低。动态时钟管理是低功耗设计的关键。</p><h2 id="2-6-时钟域-Clock-Domain"><a href="#2-6-时钟域-Clock-Domain" class="headerlink" title="2.6 时钟域(Clock Domain)"></a>2.6 时钟域(Clock Domain)</h2><p>时钟域是一组由CCM（时钟控制模块）中同一时钟控制信号驱动的功能模块集合。</p><p>通过对时钟域内的时钟进行门控（gating），无论是通过软件控制，还是与模块活动相关的硬件控制，均可对属于该时钟域的所有模块统一进行时钟门控 &#x2F; 使能。因此，时钟域可实现对该域动态功耗的高效控制。</p><p>芯片被划分为多个时钟域，每个时钟域由LPCG（低功耗时钟门控）模块内对应的一组时钟门控单元控制。这使得 CCM&#x2F;LPCG 能够对系统中每个时钟域进行独立的时钟使能与门控。</p><h2 id="2-7-时钟树-Clock-Tree"><a href="#2-7-时钟树-Clock-Tree" class="headerlink" title="2.7 时钟树(Clock Tree)"></a>2.7 时钟树(Clock Tree)</h2><p><strong>时钟树</strong>是芯片内部一个专门设计的、用于将<strong>时钟信号</strong>从单一源点（如PLL锁相环）<strong>尽可能同时地</strong>传递到芯片所有时序元件（主要是寄存器和触发器）的<strong>分布式缓冲网络</strong>。其形状像一棵倒置的树，根是时钟源，枝叶终点是各个时序单元。</p><p>下面是一张时钟树示意图：</p><p><img src="/2026/02/06/ARM/ARM%E6%97%B6%E9%92%9F%E7%B3%BB%E7%BB%9F/simple_clk_tree.png" alt="simple_clk_tree"></p><p>通过时钟树图，确定外设使用的是哪个时钟。</p><hr><p><em>完</em></p><p><a href="https://mp.weixin.qq.com/s/Hsc_g-jGNUTbHr7sper3yw">【原文阅读】</a></p>]]></content>
+      
+      
+      <categories>
+          
+          <category> ARM </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> ARM </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>深入理解 U-Boot ARM 平台 memset 的汇编实现</title>
+      <link href="/2026/02/02/U-Boot%E5%AD%A6%E4%B9%A0/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3%20U-Boot%20ARM%20%E5%B9%B3%E5%8F%B0memset%E7%9A%84%E6%B1%87%E7%BC%96%E5%AE%9E%E7%8E%B0/"/>
+      <url>/2026/02/02/U-Boot%E5%AD%A6%E4%B9%A0/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3%20U-Boot%20ARM%20%E5%B9%B3%E5%8F%B0memset%E7%9A%84%E6%B1%87%E7%BC%96%E5%AE%9E%E7%8E%B0/</url>
+      
+        <content type="html"><![CDATA[<blockquote><p>硬件平台: NXP IMX6ULL (Cortex-A7)</p><p>U-Boot版本: 2025.04</p><p>架构: ARMv7-A</p><p>注意：代码有删减，忽略不符合条件编译的代码。</p></blockquote><p>在嵌入式系统开发中，内存初始化操作是系统启动和运行的基础。memset 作为标准C库中最基本的内存操作函数之一，其性能直接影响系统启动时间和运行效率。在U-Boot这样的引导加载程序中，高效的内存初始化尤为关键。因此ARM架构需要针对 memset 函数在汇编级别进行深度优化，平衡代码大小、执行速度和功耗。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> ARM </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> U-Boot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>U-Boot源码学习和调试快速定位函数代码位置技巧</title>
+      <link href="/2026/02/01/U-Boot%E5%AD%A6%E4%B9%A0/U-Boot%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E5%92%8C%E8%B0%83%E8%AF%95%E5%BF%AB%E9%80%9F%E5%AE%9A%E4%BD%8D%E5%87%BD%E6%95%B0%E4%BB%A3%E7%A0%81%E4%BD%8D%E7%BD%AE%E6%8A%80%E5%B7%A7/"/>
+      <url>/2026/02/01/U-Boot%E5%AD%A6%E4%B9%A0/U-Boot%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E5%92%8C%E8%B0%83%E8%AF%95%E5%BF%AB%E9%80%9F%E5%AE%9A%E4%BD%8D%E5%87%BD%E6%95%B0%E4%BB%A3%E7%A0%81%E4%BD%8D%E7%BD%AE%E6%8A%80%E5%B7%A7/</url>
+      
+        <content type="html"><![CDATA[<p>在我们学习U-Boot源码和调试过程中，是否经常遇到这样的场景？程序运行到某个函数时突然崩溃，屏幕上只有晦涩的寄存器值和内存地址，却不知道这段代码究竟对应源码的哪个位置。或者在研究U-Boot启动流程时，想追踪某个关键函数的实现，面对众多源码中的实现和条件编译不能精准确定对应代码位置？</p><p>假设我们在学习U-Boot源码或者源码移植时，遇到一个函数实现，但是通过 grep 发现，结果包含众多编译条件下的函数实现。如何精准快速地定位到相应位置呢？</p><p>我们以 board_init_f_init_reserve 函数中调用的 memset 函数为例。</p><p>最基本的方法就是在源码目录下使用 grep 命令。</p><p>要查找的模式包含：</p><ul><li>*memset( - 星号紧挨着memset</li><li>* memset( - 星号后有一个或多个空格，然后是memset</li></ul><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">grep</span> <span class="token parameter variable">-r</span> <span class="token string">"\* *memset("</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre><p>去掉不相关的可以得到以下几个实现：</p><p>arch&#x2F;arm&#x2F;lib&#x2F;memset.S 中的汇编函数实现，以及各个编译条件下的C函数实现，比如lib&#x2F;string.c、lib&#x2F;efi_loader&#x2F;efi_freestanding.c、lib&#x2F;efi&#x2F;efi_stub.c 等。</p><p>实际上只要我们认真追踪每一个函数的实现的编译条件等总是能找到对应的实现源码。最终我们得到源码为 arch&#x2F;arm&#x2F;lib&#x2F;memset.S 中的实现。</p><p>grep 方法传统而强大，但是这样会花费我们大量的时间，下面我们将分享一套实用技巧，帮助你在U-Boot源码学习中高效定位问题。</p><hr><p>我们在学习或移植U-Boot源码时，肯定是存在一套可编译的或不同平台的源码，此时我们可以将其先编译得到编译后的二进制程序。</p><p>在实际编译中，我们知道最后符号表中每一个符号都是独一无二的，不可能同名。</p><p><strong>第一步是获取函数的符号地址信息</strong>：</p><p>1）反汇编</p><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">arm-linux-gnueabi-objdump <span class="token parameter variable">-d</span> u-boot <span class="token operator">|</span> <span class="token function">grep</span> <span class="token parameter variable">-A</span> <span class="token number">20</span> <span class="token string">"&lt;memset>:"</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre><p>可得到类似输出：</p><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token number">87801740</span> <span class="token operator">&lt;</span>memset<span class="token operator">></span>:<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre><p>其中 87801740 就是 memset 函数在符号表中的地址。</p><p>2）编译 U-Boot 时会生成 System.map 文件，包含所有符号的地址信息：</p><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 查找函数地址</span><span class="token function">grep</span> <span class="token string">"函数名"</span> System.map<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre><p>其输出结果：</p><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token number">87801740</span> T memset<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre><p>3）nm：符号表查询工具</p><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 查找特定函数地址</span>arm-linux-gnueabi-nm u-boot <span class="token operator">|</span> <span class="token function">grep</span> memset<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre><p>输出结果：</p><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token number">87801740</span> T memset<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre><p>4）readelf：ELF文件分析器</p><p>查看更详细的重定位信息和段信息：</p><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 查看符号表</span>arm-linux-gnueabi-readelf <span class="token parameter variable">-s</span> u-boot <span class="token operator">|</span> <span class="token function">grep</span> memset<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre><p>输出结果：</p><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token number">497</span>: 00000000     <span class="token number">0</span> FILE    LOCAL  DEFAULT  ABS arch/arm/lib/memset.o<span class="token number">7878</span>: <span class="token number">87801741</span>   <span class="token number">158</span> FUNC    GLOBAL DEFAULT    <span class="token number">3</span> memset<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre><p><strong>第二步将符号地址转换为源码文件位置：</strong></p><ol><li><strong>addr2line 工具</strong>，将程序地址转换为源码文件位置。</li></ol><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">arm-linux-gnueabi-addr2line <span class="token parameter variable">-e</span> u-boot <span class="token number">87801740</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre><p>输出结果：</p><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">/Work/arm/uboot/u-boot-2025.04/out/<span class="token punctuation">..</span>/arch/arm/lib/memset.S:21<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre><p>同样的当我们在调试U-Boot启动过程时，遇到程序崩溃，如果得到程序计数器指向的地址，我们同样可以使用 addrline 工具快速的定位到源码文件位置。</p><ol start="2"><li><strong>u-boot.map 中查找</strong></li></ol><pre class="line-numbers language-none"><code class="language-none">.text          0x0000000087801740       0xa0 arch&#x2F;arm&#x2F;lib&#x2F;memset.o               0x0000000087801740                memset<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre><p>通过以上两步即可快速准确地定位到函数源码的实现位置。</p><hr><p>掌握U-Boot源码的定位技巧，提高学习和开发效率。随着经验的积累，你将能够在庞大的U-Boot代码库中自如导航，快速定位问题，提高开发效率。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> U-Boot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>board_init_f_alloc_reserve 和 board_init_f_init_reserve 函数分析</title>
+      <link href="/2026/01/27/U-Boot%E5%AD%A6%E4%B9%A0/U-Boot%20board_init.c%20%E6%96%87%E4%BB%B6%E5%88%86%E6%9E%90/"/>
+      <url>/2026/01/27/U-Boot%E5%AD%A6%E4%B9%A0/U-Boot%20board_init.c%20%E6%96%87%E4%BB%B6%E5%88%86%E6%9E%90/</url>
+      
+        <content type="html"><![CDATA[<blockquote><p>硬件平台: NXP IMX6ULL (Cortex-A7)</p><p>U-Boot版本: 2025.04</p><p>架构: ARMv7-A</p><p>注意：代码有删减，忽略不符合条件编译的代码。</p></blockquote><p>_main 函数代码实现了从汇编环境到完整C环境的完整过渡。其首先设置调用 board_init_f() 所需的初始环境。 此环境提供一个堆栈和一个用于存储全局数据（GD）结构的空间，两者都位于某些可立即使用的RAM（SRAM、锁定缓存等）中。 在此上下文中，可变的全局数据（无论是否初始化，包括BSS段）都不可用；只有常量初始化数据可用。 在调用 board_init_f() 之前，GD应被清零。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> IMX6ULL </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>IMX6ULL crt0.S _main函数分析</title>
+      <link href="/2026/01/15/U-Boot%E5%AD%A6%E4%B9%A0/IMX6ULL-crt0-S-main%E5%87%BD%E6%95%B0%E5%88%86%E6%9E%90/"/>
+      <url>/2026/01/15/U-Boot%E5%AD%A6%E4%B9%A0/IMX6ULL-crt0-S-main%E5%87%BD%E6%95%B0%E5%88%86%E6%9E%90/</url>
+      
+        <content type="html"><![CDATA[<blockquote><p>硬件平台: NXP IMX6ULL (Cortex-A7)</p><p>U-Boot版本: 2025.04</p><p>架构: ARMv7-A</p><p>注意：代码有删减，忽略不符合条件编译的代码。</p></blockquote><p>_main 函数代码实现了从汇编环境到完整C环境的完整过渡。</p><p>_main函数在arch&#x2F;arm&#x2F;lib&#x2F;crt0.S中定义。</p><h1 id="crt0-S文件注释"><a href="#crt0-S文件注释" class="headerlink" title="crt0.S文件注释"></a>crt0.S文件注释</h1><p>以下是crt0.S文件注释的翻译：</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> IMX6ULL </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>IMX6ULL lowlevel_init.S分析</title>
+      <link href="/2026/01/11/U-Boot%E5%AD%A6%E4%B9%A0/IMX6ULL-lowlevel-init-S%E5%88%86%E6%9E%90/"/>
+      <url>/2026/01/11/U-Boot%E5%AD%A6%E4%B9%A0/IMX6ULL-lowlevel-init-S%E5%88%86%E6%9E%90/</url>
+      
+        <content type="html"><![CDATA[<p>硬件平台: NXP IMX6ULL (Cortex-A7)</p><p>U-Boot版本: 2025.04</p><p>架构: ARMv7-A</p><p>注意：代码有删减，忽略不符合条件编译的代码。</p><p>start.S中cpu_init_crit函数跳转至lowlevel_init函数执行。</p><h1 id="s-init-函数定义"><a href="#s-init-函数定义" class="headerlink" title="s_init 函数定义"></a>s_init 函数定义</h1>]]></content>
+      
+      
+      <categories>
+          
+          <category> IMX6ULL </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>IMX6ULL ARMv7 Cortex-A start.S详细解析</title>
+      <link href="/2026/01/10/U-Boot%E5%AD%A6%E4%B9%A0/IMX6ULL-ARMv7-Cortex-A-start-S%E8%AF%A6%E7%BB%86%E8%A7%A3%E6%9E%90/"/>
+      <url>/2026/01/10/U-Boot%E5%AD%A6%E4%B9%A0/IMX6ULL-ARMv7-Cortex-A-start-S%E8%AF%A6%E7%BB%86%E8%A7%A3%E6%9E%90/</url>
+      
+        <content type="html"><![CDATA[<p>硬件平台: NXP IMX6ULL (Cortex-A7)</p><p>U-Boot版本: 2025.04</p><p>架构: ARMv7-A</p><p>注意：代码有删减，仅讲解涉及必要内容，更多功能随着后续实现不断添加讲解。</p><p>文件路径: arch&#x2F;arm&#x2F;cpu&#x2F;armv7&#x2F;start.S。Boot&#x2F;SPL 的入口点和初始化代码.</p><h1 id="一、头文件包含"><a href="#一、头文件包含" class="headerlink" title="一、头文件包含"></a>一、头文件包含</h1><ol><li>#include &lt;asm-offsets.h&gt;</li></ol><p>自动生成的头文件，包含结构体成员偏移量，用于在汇编中访问C结构体。</p><p>生成方式：编译时由lib&#x2F;asm-offsets.c等生成。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> IMX6ULL </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> ARM </tag>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>Kconfig配置描述文件问题记录</title>
+      <link href="/2026/01/09/U-Boot%E5%AD%A6%E4%B9%A0/Kconfig%E9%85%8D%E7%BD%AE%E6%8F%8F%E8%BF%B0%E6%96%87%E4%BB%B6%E9%97%AE%E9%A2%98%E8%AE%B0%E5%BD%95/"/>
+      <url>/2026/01/09/U-Boot%E5%AD%A6%E4%B9%A0/Kconfig%E9%85%8D%E7%BD%AE%E6%8F%8F%E8%BF%B0%E6%96%87%E4%BB%B6%E9%97%AE%E9%A2%98%E8%AE%B0%E5%BD%95/</url>
+      
+        <content type="html"><![CDATA[<p>Kconfig文件在编写和编译时遇到需要注意的一些问题汇总。</p><h2 id="问题1：输入提示"><a href="#问题1：输入提示" class="headerlink" title="问题1：输入提示"></a>问题1：输入提示</h2><p>每个配置项最多只能有一个提示，用于显示给用户。</p><p>如果不存在提示，则配置选项是不可见，用户无法直接更改其值，并且该选项不会出现在任何配置菜单中。其值只能通过“default”和“select”设置。这意味着在menuconfig界面没有显示用户不能设置更改，同样地，在defconfig文件中即使设置也无效。</p><h2 id="问题2：默认值"><a href="#问题2：默认值" class="headerlink" title="问题2：默认值"></a>问题2：默认值</h2><p>默认值只是一个建议值，可以被用户更改。一个配置选项可以有多个默认值。如果有多个默认值，则仅激活第一个定义的默认值。默认值不限于定义它们的配置项，能在其他地方定义，也可以被较早的定义覆盖。仅当用户未设置其他值时（通过上面的输入提示）才将默认值分配给配置符号。如果输入提示可见，则会将默认值呈现给用户，并且用户可以覆盖它。</p><p>系统会按其在Kconfig文件中的出现顺序（以及被包含的顺序）处理 default 语句。<br>例如，如果一个配置项在不同文件里都定义了default值，按照source的顺序取第一个出现的default的值。<br>在arch&#x2F;arm&#x2F;mach-imx&#x2F;Kconfig中</p><pre class="line-numbers language-none"><code class="language-none">config IMX_CONFIG    string &quot;DCD script to use&quot;    depends on MACH_IMX    default &quot;arch&#x2F;arm&#x2F;mach-imx&#x2F;spl_sd.cfg&quot;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre><p>以及board&#x2F;freescale&#x2F;mx6ullevk&#x2F;Kconfig中</p><pre class="line-numbers language-none"><code class="language-none">config IMX_CONFIG    default &quot;board&#x2F;freescale&#x2F;mx6ullevk&#x2F;imximage.cfg&quot;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre><p>它们都在arch&#x2F;arm&#x2F;Kconfig中被包含进来，source的顺序如下</p><pre class="line-numbers language-none"><code class="language-none">...source &quot;arch&#x2F;arm&#x2F;mach-imx&#x2F;mx6&#x2F;Kconfig&quot;...source &quot;arch&#x2F;arm&#x2F;mach-imx&#x2F;Kconfig&quot;...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre><p>所以在生成的.config中</p><pre class="line-numbers language-none"><code class="language-none">CONFIG_IMX_CONFIG&#x3D;&quot;board&#x2F;freescale&#x2F;mx6ullevk&#x2F;imximage.cfg&quot;<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre><p>如果把source的顺序切换一下，得到的值正好相反。</p><pre class="line-numbers language-none"><code class="language-none">CONFIG_IMX_CONFIG&#x3D;&quot;arch&#x2F;arm&#x2F;mach-imx&#x2F;spl_sd.cfg&quot;<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre><p>注意：如果配置选项没有default属性，那么此配置项默认值默认为“n”。</p><h2 id="问题3：config配置选项不出现在-config文件中"><a href="#问题3：config配置选项不出现在-config文件中" class="headerlink" title="问题3：config配置选项不出现在.config文件中"></a>问题3：config配置选项不出现在.config文件中</h2><p>在Kconfig中，如果你定义了一个config项，但它在.config中不出现，通常有以下两个原因：</p><ul><li>该config没有设置默认值（default），并且没有被其他配置项选择（select）或依赖（depends on）的条件不满足。</li><li>该config可能依赖于其他配置项，而依赖条件不满足，所以它没有被显示，因此也无法设置。</li></ul><h2 id="问题4：-‘-‘-in-different-file-than-‘-‘-location-of-the-‘-‘"><a href="#问题4：-‘-‘-in-different-file-than-‘-‘-location-of-the-‘-‘" class="headerlink" title="问题4： ‘*‘ in different file than ‘*‘  location of the ‘*‘"></a>问题4： ‘*‘ in different file than ‘*‘  location of the ‘*‘</h2><p>make时遇到类似下面的报错：</p><pre class="line-numbers language-none"><code class="language-none">arch&#x2F;arm&#x2F;mach-imx&#x2F;mx6&#x2F;Kconfig:31: &#39;endif&#39; in different file than &#39;if&#39;arch&#x2F;arm&#x2F;mach-imx&#x2F;mx6&#x2F;Kconfig:1: location of the &#39;if&#39;arch&#x2F;arm&#x2F;Kconfig:36: &#39;endmenu&#39; in different file than &#39;menu&#39;arch&#x2F;arm&#x2F;mach-imx&#x2F;mx6&#x2F;Kconfig:1: location of the &#39;menu&#39;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre><p>make时遇到这样的报错，那是因为文本的最后一行丢失了一个换行符。只需要用vim打开文件再保存一下，或者VSCode打开的文本后留一个空行。</p><p>根据POSIX标准，文本文件的每一行都应该以换行符（LF，即’\n’）结束，包括最后一行。有些编辑器（如VSCode）在显示文件时，可能会将文件末尾的换行符显示为一个空行，但也有一些编辑器不显示这个空行。所以如果在显示为空行的编辑器里删除末尾的空行就会出现这个报错。</p><hr><p><a href="https://blog.csdn.net/uoscn/article/details/155971583">原文阅读</a></p>]]></content>
+      
+      
+      <categories>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> U-Boot </tag>
+            
+            <tag> Kconfig </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>U-Boot 配置构建系统（Kconfig/Kbuild）</title>
+      <link href="/2026/01/09/U-Boot%E5%AD%A6%E4%B9%A0/U-Boot%20%E9%85%8D%E7%BD%AE%E6%9E%84%E5%BB%BA%E7%B3%BB%E7%BB%9F%EF%BC%88Kconfig%E5%92%8CKbuild%EF%BC%89/"/>
+      <url>/2026/01/09/U-Boot%E5%AD%A6%E4%B9%A0/U-Boot%20%E9%85%8D%E7%BD%AE%E6%9E%84%E5%BB%BA%E7%B3%BB%E7%BB%9F%EF%BC%88Kconfig%E5%92%8CKbuild%EF%BC%89/</url>
+      
+        <content type="html"><![CDATA[<p>在嵌入式系统的世界里，U-Boot（Universal Boot Loader，通用引导加载程序）扮演着至关重要的角色。它是在操作系统内核运行之前执行的一段程序，负责初始化硬件设备、建立内存映射，并将系统的软硬件环境带至一个合适的状态，最终加载并启动操作系统内核。</p><p>U-Boot 因其开源、支持多种处理器架构（如ARM、PowerPC、MIPS、x86）和嵌入式操作系统而在业界深受欢迎。然而，支撑其强大功能与高度可移植性的关键，是其背后一套高效、灵活的配置与构建系统。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> U-Boot </tag>
+            
+            <tag> Kconfig </tag>
+            
+            <tag> Kbuild </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>IMX6ULL链接脚本u-boot.lds分析</title>
+      <link href="/2026/01/09/U-Boot%E5%AD%A6%E4%B9%A0/IMX6ULL%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%ACu-boot.lds%E5%88%86%E6%9E%90/"/>
+      <url>/2026/01/09/U-Boot%E5%AD%A6%E4%B9%A0/IMX6ULL%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%ACu-boot.lds%E5%88%86%E6%9E%90/</url>
+      
+        <content type="html"><![CDATA[<p>硬件平台: NXP IMX6ULL (Cortex-A7)</p><p>U-Boot版本: 2025.04</p><p>架构: ARMv7-A</p><p>注意：下面代码有删减，仅讲解初期必要内容，更多功能随着后续实现不断添加讲解。</p><h1 id="链接脚本u-boot-lds"><a href="#链接脚本u-boot-lds" class="headerlink" title="链接脚本u-boot.lds"></a>链接脚本u-boot.lds</h1><p>arch&#x2F;arm&#x2F;cpu&#x2F;u-boot.lds是U-Boot的链接脚本，定义了代码和数据在内存中的布局。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> IMX6ULL </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>U-Boot的Host程序make流程</title>
+      <link href="/2026/01/09/U-Boot%E5%AD%A6%E4%B9%A0/U-Boot%20%E7%9A%84%20Host%20%E7%A8%8B%E5%BA%8F%20make%20%E6%B5%81%E7%A8%8B/"/>
+      <url>/2026/01/09/U-Boot%E5%AD%A6%E4%B9%A0/U-Boot%20%E7%9A%84%20Host%20%E7%A8%8B%E5%BA%8F%20make%20%E6%B5%81%E7%A8%8B/</url>
+      
+        <content type="html"><![CDATA[<h1 id="一、U-Boot-中的-Host-程序"><a href="#一、U-Boot-中的-Host-程序" class="headerlink" title="一、U-Boot 中的 Host 程序"></a>一、U-Boot 中的 Host 程序</h1><p>U-Boot 的构建系统采用与 Linux 内核相似的 Kbuild 架构，这使得 U-Boot 的配置和编译过程更灵活和自动化。构建系统主要由 Makefile 脚本、Kconfig 配置语言和一系列 host 程序组成，它们共同协作完成从源码到可执行镜像的转换。</p><p>Host 程序是指在编译主机上本地执行的程序，它们不参与 U-Boot 运行时环境的构建，而是负责处理各种构建前置任务。这些程序通常由C语言编写，并在构建过程的早期被编译成本地可执行文件。它们在 U-Boot 项目中的位置通常位于 scripts&#x2F;、tools&#x2F; 等目录下。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> U-Boot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>U-Boot配置编译过程及Makefile分析</title>
+      <link href="/2026/01/09/U-Boot%E5%AD%A6%E4%B9%A0/U-Boot%E9%85%8D%E7%BD%AE%E7%BC%96%E8%AF%91%E8%BF%87%E7%A8%8B%E5%8F%8AMakefile%E5%88%86%E6%9E%90/"/>
+      <url>/2026/01/09/U-Boot%E5%AD%A6%E4%B9%A0/U-Boot%E9%85%8D%E7%BD%AE%E7%BC%96%E8%AF%91%E8%BF%87%E7%A8%8B%E5%8F%8AMakefile%E5%88%86%E6%9E%90/</url>
+      
+        <content type="html"><![CDATA[<ul><li>主机系统：Ubuntu24.04（x86_64）</li><li>目标平台：I.MX6ULL（ARM）</li><li>U-Boot版本： v2025.04</li><li>交叉编译工具链：gcc-linaro-arm-linux-gnueabihf 7.5.0-2019.12-x86_64</li></ul><h1 id="一、交叉编译工具链和环境变量配置"><a href="#一、交叉编译工具链和环境变量配置" class="headerlink" title="一、交叉编译工具链和环境变量配置"></a>一、交叉编译工具链和环境变量配置</h1><p>在一种计算机环境中运行的编译程序，能编译出在另外一种环境下运行的代码，我们就称这种编译器支持交叉编译，这个编译过程就称为交叉编译。</p><p>要进行交叉编译，我们需要在主机平台（比如x86_64）上安装对应的交叉编译工具链，然后用这个交叉编译工具链编译我们的源代码，最终生成可在目标平台上（比如ARM）运行的代码。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> U-Boot </tag>
+            
+            <tag> Makefile </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>include/generated/asm-offsets.h文件的生成过程</title>
+      <link href="/2026/01/09/U-Boot%E5%AD%A6%E4%B9%A0/asm-offsets.h%E6%96%87%E4%BB%B6%E7%9A%84%E7%94%9F%E6%88%90%E8%BF%87%E7%A8%8B/"/>
+      <url>/2026/01/09/U-Boot%E5%AD%A6%E4%B9%A0/asm-offsets.h%E6%96%87%E4%BB%B6%E7%9A%84%E7%94%9F%E6%88%90%E8%BF%87%E7%A8%8B/</url>
+      
+        <content type="html"><![CDATA[<h1 id="为什么需要-include-generated-asm-offsets-h"><a href="#为什么需要-include-generated-asm-offsets-h" class="headerlink" title="为什么需要 include&#x2F;generated&#x2F;asm-offsets.h"></a>为什么需要 include&#x2F;generated&#x2F;asm-offsets.h</h1><p>include&#x2F;generated&#x2F;asm-offsets.h 文件包含了 C 结构体成员的偏移量定义，这些偏移量用于汇编代码中访问 C 数据结构。因为汇编语言无法直接理解 C 的结构体定义，因此需要一种机制将结构体成员的偏移量以宏定义的形式提供给汇编代码。</p><p>例如，在lowlevel_inint.S中，汇编代码需要访问 C 结构体global_data的大小。</p><pre class="line-numbers language-none"><code class="language-none">subsp, sp, #GD_SIZE<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre><h2 id="生成过程概述"><a href="#生成过程概述" class="headerlink" title="生成过程概述"></a>生成过程概述</h2><p>整个过程大致如下：</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> U-Boot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>加载地址、链接地址和运行地址</title>
+      <link href="/2026/01/09/U-Boot%E5%AD%A6%E4%B9%A0/%E5%8A%A0%E8%BD%BD%E5%9C%B0%E5%9D%80%E3%80%81%E9%93%BE%E6%8E%A5%E5%9C%B0%E5%9D%80%E5%92%8C%E8%BF%90%E8%A1%8C%E5%9C%B0%E5%9D%80/"/>
+      <url>/2026/01/09/U-Boot%E5%AD%A6%E4%B9%A0/%E5%8A%A0%E8%BD%BD%E5%9C%B0%E5%9D%80%E3%80%81%E9%93%BE%E6%8E%A5%E5%9C%B0%E5%9D%80%E5%92%8C%E8%BF%90%E8%A1%8C%E5%9C%B0%E5%9D%80/</url>
+      
+        <content type="html"><![CDATA[<p>理解加载地址、链接地址和运行地址是掌握嵌入式系统启动和重定位的关键。这三个概念分别对应程序生命周期的不同阶段。</p><p>下面我们结合IMX6ULL的U-Boot场景，对每一个概念进行详细解读。</p><h1 id="核心概念"><a href="#核心概念" class="headerlink" title="核心概念"></a>核心概念</h1><h2 id="1-链接地址"><a href="#1-链接地址" class="headerlink" title="1. 链接地址"></a>1. 链接地址</h2><p>又称<strong>虚拟内存地址</strong>。这是由链接器根据<code>链接脚本</code>（<code>u-boot.lds</code>）和配置（如<code>CONFIG_SYS_TEXT_BASE = 0x87800000</code>）为每段代码和数据分配的假定运行地址。</p><ul><li><strong>作用</strong>：编译器在生成指令时，所有函数调用、变量访问的<strong>绝对地址都是基于这个假定的地址空间计算的</strong>。例如，在链接地址为<code>0x87800000</code>的系统中，一个位于偏移<code>0x100</code>处的函数，其链接地址就是<code>0x87800100</code>。</li>]]></content>
+      
+      
+      <categories>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> U-Boot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>Kconfig配置描述文件</title>
+      <link href="/2026/01/09/U-Boot%E5%AD%A6%E4%B9%A0/Kconfig%E9%85%8D%E7%BD%AE%E6%8F%8F%E8%BF%B0%E6%96%87%E4%BB%B6/"/>
+      <url>/2026/01/09/U-Boot%E5%AD%A6%E4%B9%A0/Kconfig%E9%85%8D%E7%BD%AE%E6%8F%8F%E8%BF%B0%E6%96%87%E4%BB%B6/</url>
+      
+        <content type="html"><![CDATA[<p>Kconfig配置系统使用配置描述文件（Kconfig文本文件）定义各种配置选项及其依赖关系。开发者可以通过图形窗口或字符界面查看并设置各种配置。configs&#x2F;目录下的板卡默认配置文件defconfig文件，为Kconfig系统的菜单项提供板卡配置选项的初始值。</p><p>配置程序读取各个Kconfig，生成 .config 文件保存选择结果。在编译的时候，会根据 .config 文件里设置的符号自动包含或排除对应的源代码。</p><h1 id="一、Kconfig语法"><a href="#一、Kconfig语法" class="headerlink" title="一、Kconfig语法"></a>一、Kconfig语法</h1><h2 id="1-1-配置选项定义及配置属性"><a href="#1-1-配置选项定义及配置属性" class="headerlink" title="1.1 配置选项定义及配置属性"></a>1.1 配置选项定义及配置属性</h2><p>config定义了一个配置选项；定义时配置选项的名称省略了前缀”CONFIG_”；</p><p>单个配置选项的定义如下：</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> U-Boot </tag>
+            
+            <tag> Kconfig </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>IMX6ULL启动与DDR初始化</title>
+      <link href="/2026/01/07/U-Boot%E5%AD%A6%E4%B9%A0/IMX6ULL%E5%90%AF%E5%8A%A8%E4%B8%8EDDR%E5%88%9D%E5%A7%8B%E5%8C%96/"/>
+      <url>/2026/01/07/U-Boot%E5%AD%A6%E4%B9%A0/IMX6ULL%E5%90%AF%E5%8A%A8%E4%B8%8EDDR%E5%88%9D%E5%A7%8B%E5%8C%96/</url>
+      
+        <content type="html"><![CDATA[<p>IMX6ULL 是 NXP（原 Freescale）推出的一款高性价比应用处理器，广泛应用于工业控制、消费电子、医疗设备等领域。</p><p>IMX6ULL支持多种启动方式，比如可从 SD&#x2F;EMMC、NAND Flash、QSPI Flash等启动。用户可以根据个人情况，选择合适的启动设备。IMX6ULL 通过 BOOT_MODE[1:0] 引脚和 BOOT_CFG 引脚组来确定启动方式。当 BOOT_MODE &#x3D; 10 时，Boot ROM 读取 BOOT_CFG 引脚来决定从哪个设备启动。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> IMX6ULL </category>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> IMX6ULL </tag>
+            
+            <tag> U-Boot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>U-Boot编译过程的中间配置文件</title>
+      <link href="/2026/01/06/U-Boot%E5%AD%A6%E4%B9%A0/U-Boot%E7%BC%96%E8%AF%91%E8%BF%87%E7%A8%8B%E7%9A%84%E4%B8%AD%E9%97%B4%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6/"/>
+      <url>/2026/01/06/U-Boot%E5%AD%A6%E4%B9%A0/U-Boot%E7%BC%96%E8%AF%91%E8%BF%87%E7%A8%8B%E7%9A%84%E4%B8%AD%E9%97%B4%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6/</url>
+      
+        <content type="html"><![CDATA[<h1 id="U-Boot编译过程的中间配置文件"><a href="#U-Boot编译过程的中间配置文件" class="headerlink" title="U-Boot编译过程的中间配置文件"></a>U-Boot编译过程的中间配置文件</h1><p>U-Boot的编译过程会产生大量的中间产物文件，这些文件在构建过程中起着至关重要的作用。</p><h2 id="1-include-config-h"><a href="#1-include-config-h" class="headerlink" title="1. include&#x2F;config.h"></a>1. include&#x2F;config.h</h2><p>在make时自动生成。在目标include&#x2F;autoconf.mk、include&#x2F;autoconf.mk.dep以及u-boot.cfg生成时，作为依赖目标被创建更新。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> U-Boot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>U-Boot构建工具fixdep的工作原理及编译分析</title>
+      <link href="/2025/12/02/U-Boot%E5%AD%A6%E4%B9%A0/U-Boot%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7fixdep%E7%9A%84%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%8F%8A%E7%BC%96%E8%AF%91%E5%88%86%E6%9E%90/"/>
+      <url>/2025/12/02/U-Boot%E5%AD%A6%E4%B9%A0/U-Boot%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7fixdep%E7%9A%84%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%8F%8A%E7%BC%96%E8%AF%91%E5%88%86%E6%9E%90/</url>
+      
+        <content type="html"><![CDATA[<h1 id="一、概述与背景"><a href="#一、概述与背景" class="headerlink" title="一、概述与背景"></a>一、概述与背景</h1><p>fixdep 是 U-Boot 和 Linux 内核构建系统中的一个关键工具，它最初源自 Linux 内核的构建系统，并被 U-Boot 项目采纳使用。</p><p>该工具的主要功能是对 gcc 编译器生成的依赖文件进行优化处理，以解决大规模 C&#x2F;C++ 项目构建过程中遇到的依赖关系管理问题。</p><p>在软件开发中，特别是像操作系统内核这样的大型项目中，依赖关系的正确处理对构建系统的效率和正确性至关重要。当开发者修改一个头文件时，构建系统需要准确地知道哪些源文件受到了影响，需要被重新编译。</p><p>gcc -MD 能够生成完善且准确的依赖关系列表，它能告知 make 何时需要重新编译文件。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> U-Boot </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> U-Boot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+  
+  
+</search>

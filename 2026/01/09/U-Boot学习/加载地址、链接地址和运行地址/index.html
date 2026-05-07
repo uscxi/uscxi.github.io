@@ -1,0 +1,964 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+
+
+<style>
+  /* 加载动画 - 内联关键样式，防止闪烁 */
+  #loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0ffff;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+  }
+  
+  /* 深色模式背景 */
+  [data-theme="dark"] #loading-screen {
+    background: #0d1117;
+  }
+  
+  /* 加载完成状态 */
+  #loading-screen.loaded {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  
+  /* 内容容器 */
+  .loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+  }
+  
+  /* 头像容器 - 固定尺寸 */
+  .loading-avatar {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    flex-shrink: 0;
+  }
+  
+  /* 头像图片 - 强制尺寸和样式 */
+  .loading-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    border: 2px solid rgba(73, 177, 245, 0.2);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* 深色模式头像 */
+  [data-theme="dark"] .loading-avatar img {
+    border-color: rgba(0, 132, 255, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+
+  /* 进度条样式 */
+.loading-progress {
+  width: 200px;
+  height: 4px;
+  background: var(--border-color);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-color), var(--primary-hover));
+  border-radius: 2px;
+  animation: progress-load 2s ease-in-out infinite;
+}
+
+@keyframes progress-load {
+  0% {
+    width: 0%;
+    margin-left: 0;
+  }
+  50% {
+    width: 80%;
+    margin-left: 0;
+  }
+  100% {
+    width: 80%;
+    margin-left: 100%;
+  }
+}
+  
+  /* 加载文字 */
+  .loading-text {
+    color: #999;
+    font-size: 0.85rem;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    animation: loading-fade 1.5s ease-in-out infinite;
+  }
+  
+  /* 深色模式文字 */
+  [data-theme="dark"] .loading-text {
+    color: #707070;
+  }
+  
+  /* 文字淡入淡出 */
+  @keyframes loading-fade {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+  
+  /* 页面内容初始隐藏 */
+  #app {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  /* 加载完成后显示 */
+  body.page-loaded #app {
+    opacity: 1;
+  }
+</style>
+
+
+
+<title>加载地址、链接地址和运行地址 | STUDYWITHIOT</title>
+<meta name="description" content="STUDYWITHIOT的博客">
+<meta name="keywords" content="U-Boot">
+<meta name="author" content="STUDYWITHIOT">
+
+
+<meta name="theme-color" content="#49b1f5" id="theme-color-meta">
+
+<!-- Favicon -->
+<link rel="icon" href="/images/avatar.png">
+
+
+<link rel="stylesheet" href="/css/fontawesome/all.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<link rel="stylesheet" href="/css/prism/prism.css">
+
+
+
+
+<link rel="stylesheet" href="/css/post-verify.css">
+
+
+
+
+<script>
+(function() {
+  var savedTheme = localStorage.getItem('theme');
+  var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var defaultTheme = 'light';
+  var autoChange = true;
+  var lightTime = 7;
+  var darkTime = 19;
+  
+  var theme = savedTheme;
+  
+  if (!theme) {
+    if (autoChange) {
+      var hour = new Date().getHours();
+      theme = (hour >= darkTime || hour < lightTime) ? 'dark' : 'light';
+    } else {
+      theme = prefersDark ? 'dark' : defaultTheme;
+    }
+  }
+  
+  document.documentElement.setAttribute('data-theme', theme);
+  
+  // 更新 theme-color meta
+  var metaThemeColor = document.getElementById('theme-color-meta');
+  if (metaThemeColor) {
+    metaThemeColor.content = theme === 'dark' ? '#1a1a2e' : '#49b1f5';
+  }
+})();
+</script>
+
+
+
+<style>
+  :root {
+    --sidebar-width: 300px;
+  }
+</style>
+<meta name="generator" content="Hexo 7.3.0"></head>
+<body class="">
+
+  
+  
+  <div id="loading-screen" class="loading-screen">
+    <div class="loading-content">
+      
+      <div class="loading-avatar">
+        <img src="/images/avatar.png" 
+             alt="Loading..."
+             onerror="this.style.display='none'">
+      </div>
+      
+      
+    <div class="loading-progress">
+      <div class="progress-bar"></div>
+    </div>
+      
+      
+      
+      <p class="loading-text">加载中...</p>
+      
+    </div>
+  </div>
+  
+
+  
+  <div id="app">
+    
+    
+<header id="header" class="header">
+  <div class="header-inner">
+    
+    <div class="header-logo">
+      <a href="/" class="site-name">
+        STUDYWITHIOT
+      </a>
+    </div>
+    
+    
+    <div class="header-right">
+      <nav class="header-nav">
+        <ul class="nav-list">
+          
+          <li class="nav-item">
+            <a href="/" class="nav-link">
+              首页
+            </a>
+          </li>
+          
+          <li class="nav-item">
+            <a href="/archives" class="nav-link">
+              归档
+            </a>
+          </li>
+          
+          <li class="nav-item">
+            <a href="/categories" class="nav-link">
+              分类
+            </a>
+          </li>
+          
+          <li class="nav-item">
+            <a href="/tags" class="nav-link">
+              标签
+            </a>
+          </li>
+          
+          <li class="nav-item">
+            <a href="/about" class="nav-link">
+              关于
+            </a>
+          </li>
+          
+        </ul>
+      </nav>
+      
+      
+      
+      <button class="search-btn" id="search-btn" title="搜索 (Ctrl+K)">
+        <i class="fas fa-search"></i>
+      </button>
+      
+    </div>
+    
+    
+    <div class="header-mobile">
+      
+      <button class="search-btn-mobile" id="search-btn-mobile" aria-label="搜索">
+        <i class="fas fa-search"></i>
+      </button>
+      
+      <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="菜单">
+        <i class="fas fa-bars"></i>
+      </button>
+    </div>
+  </div>
+  
+  
+  <nav class="mobile-nav" id="mobile-nav">
+    <ul class="mobile-nav-list">
+      
+      <li class="mobile-nav-item">
+        <a href="/" class="mobile-nav-link">
+          首页
+        </a>
+      </li>
+      
+      <li class="mobile-nav-item">
+        <a href="/archives" class="mobile-nav-link">
+          归档
+        </a>
+      </li>
+      
+      <li class="mobile-nav-item">
+        <a href="/categories" class="mobile-nav-link">
+          分类
+        </a>
+      </li>
+      
+      <li class="mobile-nav-item">
+        <a href="/tags" class="mobile-nav-link">
+          标签
+        </a>
+      </li>
+      
+      <li class="mobile-nav-item">
+        <a href="/about" class="mobile-nav-link">
+          关于
+        </a>
+      </li>
+      
+    </ul>
+  </nav>
+</header>
+    
+    
+    <main id="main" class="layout-right">
+      <div class="main-inner">
+        
+        <div id="content-wrap">
+          
+
+
+<article id="post-page" class="post-content" data-type="post">
+  
+  <header class="post-header">
+    <h1 class="post-title">加载地址、链接地址和运行地址</h1>
+    
+<div class="post-meta">
+  
+  
+  <span class="meta-item">
+    <i class="far fa-calendar-alt"></i>
+    <time datetime="2026-01-09T03:20:00.000Z">
+      2026-01-09
+    </time>
+  </span>
+  
+  
+  
+  
+  <span class="meta-item">
+    <i class="fas fa-history"></i>
+    <time datetime="2026-01-09T06:52:45.388Z">
+      2026-01-09
+    </time>
+  </span>
+  
+  
+  
+  
+  <span class="meta-item">
+    <i class="far fa-folder-open"></i>
+    
+    
+      <a href="/categories/U-Boot/">U-Boot</a>
+    
+  </span>
+  
+  
+  
+  
+  <span class="meta-item">
+    <i class="far fa-file-word"></i>
+    
+    1.1k
+  </span>
+  
+  
+  
+  
+  <span class="meta-item">
+    <i class="far fa-clock"></i>
+    
+    约 6 分钟
+  </span>
+  
+</div>
+  </header>
+  
+  
+  <div class="post-body-wrap need-verify encrypted" 
+       id="post-body-wrap"
+       
+       data-code-hash="f58029d38e8c42613d5f98392ea4452d24f91e5225e12606e58623737536f0aa"
+       data-expire="7"
+       
+       
+       data-encrypted="true"
+       >
+    
+    
+      
+      <div class="post-body markdown-body encrypted-content" 
+           id="post-body" 
+           style="display: none;"
+           data-content="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">
+        
+      </div>
+      
+      
+      <div class="post-body markdown-body preview-content" id="preview-content">
+        <p>理解加载地址、链接地址和运行地址是掌握嵌入式系统启动和重定位的关键。这三个概念分别对应程序生命周期的不同阶段。</p>
+<p>下面我们结合IMX6ULL的U-Boot场景，对每一个概念进行详细解读。</p>
+<h1 id="核心概念"><a href="#核心概念" class="headerlink" title="核心概念"></a>核心概念</h1><h2 id="1-链接地址"><a href="#1-链接地址" class="headerlink" title="1. 链接地址"></a>1. 链接地址</h2><p>又称<strong>虚拟内存地址</strong>。这是由链接器根据<code>链接脚本</code>（<code>u-boot.lds</code>）和配置（如<code>CONFIG_SYS_TEXT_BASE = 0x87800000</code>）为每段代码和数据分配的假定运行地址。</p>
+<ul>
+<li><strong>作用</strong>：编译器在生成指令时，所有函数调用、变量访问的<strong>绝对地址都是基于这个假定的地址空间计算的</strong>。例如，在链接地址为<code>0x87800000</code>的系统中，一个位于偏移<code>0x100</code>处的函数，其链接地址就是<code>0x87800100</code>。</li>
+      </div>
+    
+    
+    
+    
+    <div class="read-verify-mask" id="read-verify-mask">
+      <div class="verify-mask-gradient"></div>
+      <div class="verify-mask-content">
+        <div class="verify-lock-icon">
+          <i class="fas fa-lock"></i>
+        </div>
+        <p class="verify-mask-text">此文章需要验证后才能阅读全文</p>
+        <button class="verify-show-btn" id="verify-show-btn">
+          <i class="fas fa-qrcode"></i>
+          获取验证码
+        </button>
+      </div>
+    </div>
+    
+  </div>
+  
+  
+  
+
+<div class="post-copyright">
+  <div class="copyright-item">
+    <span class="copyright-label">文章作者</span>
+    <span class="copyright-content">
+      
+      <a href="https://uscxi.github.io/" target="_blank" rel="noopener">STUDYWITHIOT</a>
+      
+    </span>
+  </div>
+
+  
+  <div class="copyright-item">
+    <span class="copyright-label">文章链接</span>
+    <span class="copyright-content">
+      <a href="https://uscxi.github.io/2026/01/09/U-Boot%E5%AD%A6%E4%B9%A0/%E5%8A%A0%E8%BD%BD%E5%9C%B0%E5%9D%80%E3%80%81%E9%93%BE%E6%8E%A5%E5%9C%B0%E5%9D%80%E5%92%8C%E8%BF%90%E8%A1%8C%E5%9C%B0%E5%9D%80/">https://uscxi.github.io/2026/01/09/U-Boot学习/加载地址、链接地址和运行地址/</a>
+    </span>
+  </div>
+  <div class="copyright-item">
+    <span class="copyright-label">版权声明</span>
+    <span class="copyright-content">
+      本博客所有文章除特别声明外，均采用 
+      <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener">CC BY-NC-SA 4.0</a> 
+      许可协议。转载请注明来自：
+      <a href="https://uscxi.github.io">STUDYWITHIOT</a> ！
+    </span>
+  </div>
+</div>
+
+  
+  
+  <div class="post-meta-bottom">
+    
+    <div class="post-tags">
+      
+        <i class="fas fa-tags"></i>
+        
+          <a href="/tags/U-Boot/" class="tag-link">#U-Boot</a>
+        
+      
+    </div>
+    
+    
+    
+
+
+<div class="post-share">
+  
+  
+  <a class="share-item weibo" 
+     href="https://service.weibo.com/share/share.php?url=https%3A%2F%2Fuscxi.github.io%2F2026%2F01%2F09%2FU-Boot%25E5%25AD%25A6%25E4%25B9%25A0%2F%25E5%258A%25A0%25E8%25BD%25BD%25E5%259C%25B0%25E5%259D%2580%25E3%2580%2581%25E9%2593%25BE%25E6%258E%25A5%25E5%259C%25B0%25E5%259D%2580%25E5%2592%258C%25E8%25BF%2590%25E8%25A1%258C%25E5%259C%25B0%25E5%259D%2580%2F&title=%E5%8A%A0%E8%BD%BD%E5%9C%B0%E5%9D%80%E3%80%81%E9%93%BE%E6%8E%A5%E5%9C%B0%E5%9D%80%E5%92%8C%E8%BF%90%E8%A1%8C%E5%9C%B0%E5%9D%80"
+     target="_blank" rel="noopener" title="微博">
+    <i class="fab fa-weibo"></i>
+  </a>
+  
+  
+  
+  
+  <a class="share-item qq"
+     href="https://connect.qq.com/widget/shareqq/index.html?url=https%3A%2F%2Fuscxi.github.io%2F2026%2F01%2F09%2FU-Boot%25E5%25AD%25A6%25E4%25B9%25A0%2F%25E5%258A%25A0%25E8%25BD%25BD%25E5%259C%25B0%25E5%259D%2580%25E3%2580%2581%25E9%2593%25BE%25E6%258E%25A5%25E5%259C%25B0%25E5%259D%2580%25E5%2592%258C%25E8%25BF%2590%25E8%25A1%258C%25E5%259C%25B0%25E5%259D%2580%2F&title=%E5%8A%A0%E8%BD%BD%E5%9C%B0%E5%9D%80%E3%80%81%E9%93%BE%E6%8E%A5%E5%9C%B0%E5%9D%80%E5%92%8C%E8%BF%90%E8%A1%8C%E5%9C%B0%E5%9D%80&summary="
+     target="_blank" rel="noopener" title="QQ">
+    <i class="fab fa-qq"></i>
+  </a>
+  
+  
+  
+  
+  <div class="share-item wechat" title="微信">
+    <i class="fab fa-weixin"></i>
+    <div class="wechat-qrcode">
+      <p>微信扫一扫分享</p>
+      <div class="qrcode-img" id="share-wechat-qrcode"></div>
+    </div>
+  </div>
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  <div class="share-item copy-link" id="share-copy-btn" title="复制链接">
+    <i class="fas fa-link"></i>
+  </div>
+  
+</div>
+
+  </div>
+  
+  
+  
+
+
+<div class="post-reward">
+  <div class="reward-wrap">
+    <button class="reward-btn">
+      <i class="fas fa-qrcode"></i>
+      <span>打赏</span>
+    </button>
+    
+    <div class="reward-popup">
+      
+      <div class="reward-text">请作者喝杯茶吧~</div>
+      
+      <div class="reward-qrcodes">
+        
+        <div class="reward-qrcode">
+          <div class="qrcode-box">
+            <img src="/images/wechat-pay.png" alt="微信打赏">
+          </div>
+          <span class="reward-label wechat">
+            <i class="fab fa-weixin"></i> 微信
+          </span>
+        </div>
+        
+        
+        <div class="reward-qrcode">
+          <div class="qrcode-box">
+            <img src="/images/alipay.png" alt="支付宝打赏">
+          </div>
+          <span class="reward-label alipay">
+            <i class="fab fa-alipay"></i> 支付宝
+          </span>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+
+  
+  
+  <nav class="post-nav">
+    
+    <a href="/2026/01/09/U-Boot%E5%AD%A6%E4%B9%A0/asm-offsets.h%E6%96%87%E4%BB%B6%E7%9A%84%E7%94%9F%E6%88%90%E8%BF%87%E7%A8%8B/" class="prev-post">
+      <i class="fas fa-chevron-left"></i>
+      <span>include/generated/asm-offsets.h文件的生成过程</span>
+    </a>
+    
+    
+    <a href="/2026/01/09/U-Boot%E5%AD%A6%E4%B9%A0/Kconfig%E9%85%8D%E7%BD%AE%E6%8F%8F%E8%BF%B0%E6%96%87%E4%BB%B6/" class="next-post">
+      <span>Kconfig配置描述文件</span>
+      <i class="fas fa-chevron-right"></i>
+    </a>
+    
+  </nav>
+  <!-- 评论系统 -->
+  
+</article>
+
+
+
+
+
+
+<div class="verify-modal-overlay" id="verify-modal-overlay">
+  <div class="verify-modal" id="verify-modal">
+    
+    <button class="verify-modal-close" id="verify-modal-close" title="关闭">
+      <i class="fas fa-times"></i>
+    </button>
+    
+    
+    <div class="verify-modal-content">
+      
+      <div class="verify-modal-header">
+        <i class="fas fa-shield-alt"></i>
+        <h3>阅读验证</h3>
+      </div>
+      
+      
+      <div class="verify-qrcode-wrap">
+        <div class="verify-qrcode">
+          <img src="/images/qrcode.png" 
+               alt="公众号二维码"
+               onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 200%22><rect fill=%22%23f0f0f0%22 width=%22200%22 height=%22200%22/><text x=%22100%22 y=%22100%22 font-size=%2214%22 fill=%22%23999%22 text-anchor=%22middle%22>二维码加载失败</text></svg>'">
+        </div>
+        
+        <p class="verify-wechat-name">
+          <i class="fab fa-weixin"></i>
+          STUDYWITHIOT
+        </p>
+        
+      </div>
+      
+      
+      <div class="verify-tips">
+        <p>关注公众号，回复「博客」获取验证码</p>
+      </div>
+      
+      
+      <div class="verify-input-wrap">
+        <div class="verify-input-group">
+          <input type="text" 
+                 id="verify-code-input" 
+                 class="verify-input" 
+                 placeholder="请输入验证码"
+                 maxlength="10"
+                 autocomplete="off">
+          <button class="verify-submit-btn" id="verify-submit-btn">
+            <i class="fas fa-unlock-alt"></i>
+            验证
+          </button>
+        </div>
+        <p class="verify-error" id="verify-error"></p>
+      </div>
+      
+      
+      <div class="verify-footer">
+        
+          <p>验证成功后 7 天内无需重复验证</p>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+        </div>
+        
+        
+        
+<aside id="sidebar" class="sidebar">
+  <div class="sidebar-inner">
+    
+    <div id="sidebar-info" class="sidebar-content active">
+      
+<div class="card-widget card-info">
+  <div class="card-content">
+    
+    
+    <div class="author-info">
+      <div class="author-avatar">
+        <img src="/images/avatar.png" 
+             alt="STUDYWITHIOT">
+      </div>
+      
+      <div class="author-name">
+        STUDYWITHIOT
+      </div>
+      
+      <div class="author-description">
+        心之何如，有似万丈迷津，遥亘千里，其中并无舟子可以渡人，除了自渡，他人爱莫能助。
+      </div>
+    </div>
+    
+    
+    
+    <div class="site-stats">
+      <a href="/archives/" class="stat-item">
+        <span class="stat-count">44</span>
+        <span class="stat-name">文章</span>
+      </a>
+      <a href="/categories/" class="stat-item">
+        
+        <span class="stat-count">12</span>
+        <span class="stat-name">分类</span>
+      </a>
+      <a href="/tags/" class="stat-item">
+        <span class="stat-count">18</span>
+        <span class="stat-name">标签</span>
+      </a>
+    </div>
+    
+    
+    
+    <div class="social-links">
+      
+      <a href="https://github.com/uscxi" class="social-link" target="_blank" rel="noopener" title="github">
+        <i class="fab fa-github"></i>
+      </a>
+      
+      <a href="mailto:xxiao9969@163.com" class="social-link" target="_blank" rel="noopener" title="email">
+        <i class="fas fa-envelope"></i>
+      </a>
+      
+    </div>
+    
+  </div>
+</div>
+
+      
+      
+
+<div class="card-widget card-announcement">
+  <div class="card-content">
+    
+    <div class="announcement-header">
+      
+      <i class="fas fa-bullhorn"></i>
+      
+      <span class="announcement-title">
+        公告
+      </span>
+    </div>
+    
+    
+    <div class="announcement-content">
+      
+        <p><strong>欢迎来到我的博客！</strong></p>
+<p>关注公众号查看更多技术文章</p>
+<img src="/images/qrcode.png" >
+<p>如果你在访问中遇到问题，可前往公众号进行反馈</p>
+
+      
+    </div>
+    
+    
+    
+    <div class="announcement-link">
+      <a href="/about/" 
+         >
+        了解更多
+        <i class="fas fa-chevron-right"></i>
+      </a>
+    </div>
+    
+  </div>
+</div>
+
+    </div>
+    
+    
+    
+    <div id="sidebar-toc" class="sidebar-content">
+      
+<div class="card-widget card-toc">
+  <div class="card-header">
+    <span class="card-title">
+      <i class="fas fa-list-ul"></i> 目录
+    </span>
+    <span class="toc-progress" id="toc-progress">0%</span>
+  </div>
+  <div class="card-body">
+    <div class="toc-content" id="toc-content">
+      
+        <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%A0%B8%E5%BF%83%E6%A6%82%E5%BF%B5"><span class="toc-text">核心概念</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E9%93%BE%E6%8E%A5%E5%9C%B0%E5%9D%80"><span class="toc-text">1. 链接地址</span></a></li></ol></li></ol>
+      
+    </div>
+  </div>
+</div>
+    </div>
+    
+  </div>
+</aside>
+      </div>
+    </main>
+    
+    
+    
+<footer id="footer" class="footer">
+  <div class="footer-inner">
+    
+     
+    <div class="footer-copyright">
+      <span>
+        Copyright &copy; 
+        
+          2025 - 
+        
+        2026
+      </span>
+      <span class="footer-author">STUDYWITHIOT</span><span>. All Rights Reserved</span>
+    </div>
+    
+    
+    
+    
+    <div class="footer-powered">
+      <span>Powered by</span>
+      <a href="https://hexo.io" target="_blank" rel="noopener">Hexo</a>
+      <span>|</span>
+      <span>Theme by</span>
+      <a href="https://github.com/uscxi" target="_blank" rel="noopener">uscxi</a>
+    </div>
+    
+  </div>
+</footer>
+  </div>
+  
+  
+  
+
+<div id="rightside" class="rightside">
+  
+  <div id="rightside-top-area" class="rightside-top-area">
+    
+    
+    <button id="toc-toggle" class="rightside-btn" title="目录" data-mode="info">
+      <i class="fas fa-list-ul" id="toc-toggle-icon"></i>
+    </button>
+    
+    
+    
+    <div id="rightside-menus" class="rightside-menus">
+      
+      
+      <button id="hide-sidebar-btn" class="rightside-btn rightside-item" title="隐藏侧边栏">
+        <i class="fas fa-arrows-alt-h"></i>
+      </button>
+      
+      
+      
+      
+      <button id="theme-toggle-btn" class="rightside-btn rightside-item" title="切换主题">
+        <i class="fas fa-adjust"></i>
+      </button>
+      
+    </div>
+  </div>
+  
+  
+  <div id="rightside-bottom-area" class="rightside-bottom-area">
+    
+    <button id="rightside-toggle" class="rightside-btn rightside-toggle" title="更多功能">
+      <i class="fas fa-cog"></i>
+    </button>
+    
+    
+    
+    <button id="go-top" class="rightside-btn rightside-go-top" title="返回顶部">
+      <span class="scroll-percent">0</span>
+      <i class="fas fa-arrow-up"></i>
+    </button>
+    
+  </div>
+</div>
+
+
+  
+  
+
+
+<div id="search-mask" class="search-mask"></div>
+
+
+<div id="search-modal" class="search-modal">
+  <div class="search-dialog">
+    
+    <div class="search-header">
+      <div class="search-input-wrap">
+        <i class="fas fa-search search-icon"></i>
+        <input 
+          type="text" 
+          id="search-input" 
+          class="search-input" 
+          placeholder="搜索文章..."
+          autocomplete="off"
+        >
+        <button id="search-clear" class="search-clear" title="清空">
+          <i class="fas fa-times-circle"></i>
+        </button>
+      </div>
+      <button id="search-close" class="search-close" title="关闭 (ESC)">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    
+    <div class="search-tips">
+      <span><kbd>↑</kbd><kbd>↓</kbd> 导航</span>
+      <span><kbd>Enter</kbd> 打开</span>
+      <span><kbd>ESC</kbd> 关闭</span>
+    </div>
+    
+    
+    <div id="search-results" class="search-results">
+      <div class="search-init">
+        <i class="fas fa-search"></i>
+        <p>输入关键词开始搜索</p>
+      </div>
+    </div>
+    
+    
+    <div id="search-stats" class="search-stats"></div>
+  </div>
+</div>
+
+
+  
+  <script src="/js/main.js"></script>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/rightside.js"></script>
+
+  
+  <script src="/js/search.js"></script>
+  
+  
+  
+  
+    
+    <script src="/js/prism/prism.js"></script>
+    
+    <script src="/js/toc.js"></script>
+    
+    
+    <script src="/js/post-actions.js"></script>
+    
+    
+      <script src="/js/encrypt-config.js"></script>
+      <script src="/js/crypto-js.min.js"></script>
+      <script src="/js/post-verify.js"></script>
+    
+  
+</body>
+</html>

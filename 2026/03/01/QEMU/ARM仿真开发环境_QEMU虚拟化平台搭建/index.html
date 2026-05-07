@@ -1,0 +1,1067 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+
+
+<style>
+  /* 加载动画 - 内联关键样式，防止闪烁 */
+  #loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0ffff;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+  }
+  
+  /* 深色模式背景 */
+  [data-theme="dark"] #loading-screen {
+    background: #0d1117;
+  }
+  
+  /* 加载完成状态 */
+  #loading-screen.loaded {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  
+  /* 内容容器 */
+  .loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+  }
+  
+  /* 头像容器 - 固定尺寸 */
+  .loading-avatar {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    flex-shrink: 0;
+  }
+  
+  /* 头像图片 - 强制尺寸和样式 */
+  .loading-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    border: 2px solid rgba(73, 177, 245, 0.2);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* 深色模式头像 */
+  [data-theme="dark"] .loading-avatar img {
+    border-color: rgba(0, 132, 255, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+
+  /* 进度条样式 */
+.loading-progress {
+  width: 200px;
+  height: 4px;
+  background: var(--border-color);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-color), var(--primary-hover));
+  border-radius: 2px;
+  animation: progress-load 2s ease-in-out infinite;
+}
+
+@keyframes progress-load {
+  0% {
+    width: 0%;
+    margin-left: 0;
+  }
+  50% {
+    width: 80%;
+    margin-left: 0;
+  }
+  100% {
+    width: 80%;
+    margin-left: 100%;
+  }
+}
+  
+  /* 加载文字 */
+  .loading-text {
+    color: #999;
+    font-size: 0.85rem;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    animation: loading-fade 1.5s ease-in-out infinite;
+  }
+  
+  /* 深色模式文字 */
+  [data-theme="dark"] .loading-text {
+    color: #707070;
+  }
+  
+  /* 文字淡入淡出 */
+  @keyframes loading-fade {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+  
+  /* 页面内容初始隐藏 */
+  #app {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  /* 加载完成后显示 */
+  body.page-loaded #app {
+    opacity: 1;
+  }
+</style>
+
+
+
+<title>ARM仿真开发环境——QEMU虚拟化平台搭建 | STUDYWITHIOT</title>
+<meta name="description" content="STUDYWITHIOT的博客">
+<meta name="keywords" content="ARM,QEMU">
+<meta name="author" content="STUDYWITHIOT">
+
+
+<meta name="theme-color" content="#49b1f5" id="theme-color-meta">
+
+<!-- Favicon -->
+<link rel="icon" href="/images/avatar.png">
+
+
+<link rel="stylesheet" href="/css/fontawesome/all.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<link rel="stylesheet" href="/css/prism/prism.css">
+
+
+
+
+
+
+
+<script>
+(function() {
+  var savedTheme = localStorage.getItem('theme');
+  var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var defaultTheme = 'light';
+  var autoChange = true;
+  var lightTime = 7;
+  var darkTime = 19;
+  
+  var theme = savedTheme;
+  
+  if (!theme) {
+    if (autoChange) {
+      var hour = new Date().getHours();
+      theme = (hour >= darkTime || hour < lightTime) ? 'dark' : 'light';
+    } else {
+      theme = prefersDark ? 'dark' : defaultTheme;
+    }
+  }
+  
+  document.documentElement.setAttribute('data-theme', theme);
+  
+  // 更新 theme-color meta
+  var metaThemeColor = document.getElementById('theme-color-meta');
+  if (metaThemeColor) {
+    metaThemeColor.content = theme === 'dark' ? '#1a1a2e' : '#49b1f5';
+  }
+})();
+</script>
+
+
+
+<style>
+  :root {
+    --sidebar-width: 300px;
+  }
+</style>
+<meta name="generator" content="Hexo 7.3.0"></head>
+<body class="">
+
+  
+  
+  <div id="loading-screen" class="loading-screen">
+    <div class="loading-content">
+      
+      <div class="loading-avatar">
+        <img src="/images/avatar.png" 
+             alt="Loading..."
+             onerror="this.style.display='none'">
+      </div>
+      
+      
+    <div class="loading-progress">
+      <div class="progress-bar"></div>
+    </div>
+      
+      
+      
+      <p class="loading-text">加载中...</p>
+      
+    </div>
+  </div>
+  
+
+  
+  <div id="app">
+    
+    
+<header id="header" class="header">
+  <div class="header-inner">
+    
+    <div class="header-logo">
+      <a href="/" class="site-name">
+        STUDYWITHIOT
+      </a>
+    </div>
+    
+    
+    <div class="header-right">
+      <nav class="header-nav">
+        <ul class="nav-list">
+          
+          <li class="nav-item">
+            <a href="/" class="nav-link">
+              首页
+            </a>
+          </li>
+          
+          <li class="nav-item">
+            <a href="/archives" class="nav-link">
+              归档
+            </a>
+          </li>
+          
+          <li class="nav-item">
+            <a href="/categories" class="nav-link">
+              分类
+            </a>
+          </li>
+          
+          <li class="nav-item">
+            <a href="/tags" class="nav-link">
+              标签
+            </a>
+          </li>
+          
+          <li class="nav-item">
+            <a href="/about" class="nav-link">
+              关于
+            </a>
+          </li>
+          
+        </ul>
+      </nav>
+      
+      
+      
+      <button class="search-btn" id="search-btn" title="搜索 (Ctrl+K)">
+        <i class="fas fa-search"></i>
+      </button>
+      
+    </div>
+    
+    
+    <div class="header-mobile">
+      
+      <button class="search-btn-mobile" id="search-btn-mobile" aria-label="搜索">
+        <i class="fas fa-search"></i>
+      </button>
+      
+      <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="菜单">
+        <i class="fas fa-bars"></i>
+      </button>
+    </div>
+  </div>
+  
+  
+  <nav class="mobile-nav" id="mobile-nav">
+    <ul class="mobile-nav-list">
+      
+      <li class="mobile-nav-item">
+        <a href="/" class="mobile-nav-link">
+          首页
+        </a>
+      </li>
+      
+      <li class="mobile-nav-item">
+        <a href="/archives" class="mobile-nav-link">
+          归档
+        </a>
+      </li>
+      
+      <li class="mobile-nav-item">
+        <a href="/categories" class="mobile-nav-link">
+          分类
+        </a>
+      </li>
+      
+      <li class="mobile-nav-item">
+        <a href="/tags" class="mobile-nav-link">
+          标签
+        </a>
+      </li>
+      
+      <li class="mobile-nav-item">
+        <a href="/about" class="mobile-nav-link">
+          关于
+        </a>
+      </li>
+      
+    </ul>
+  </nav>
+</header>
+    
+    
+    <main id="main" class="layout-right">
+      <div class="main-inner">
+        
+        <div id="content-wrap">
+          
+
+
+<article id="post-page" class="post-content" data-type="post">
+  
+  <header class="post-header">
+    <h1 class="post-title">ARM仿真开发环境——QEMU虚拟化平台搭建</h1>
+    
+<div class="post-meta">
+  
+  
+  <span class="meta-item">
+    <i class="far fa-calendar-alt"></i>
+    <time datetime="2026-03-01T12:38:00.000Z">
+      2026-03-01
+    </time>
+  </span>
+  
+  
+  
+  
+  <span class="meta-item">
+    <i class="fas fa-history"></i>
+    <time datetime="2026-03-02T02:41:20.625Z">
+      2026-03-02
+    </time>
+  </span>
+  
+  
+  
+  
+  <span class="meta-item">
+    <i class="far fa-folder-open"></i>
+    
+    
+      <a href="/categories/ARM/">ARM</a>, 
+    
+      <a href="/categories/QEMU/">QEMU</a>
+    
+  </span>
+  
+  
+  
+  
+  <span class="meta-item">
+    <i class="far fa-file-word"></i>
+    
+    2.8k
+  </span>
+  
+  
+  
+  
+  <span class="meta-item">
+    <i class="far fa-clock"></i>
+    
+    约 14 分钟
+  </span>
+  
+</div>
+  </header>
+  
+  
+  <div class="post-body-wrap" 
+       id="post-body-wrap"
+       
+       >
+    
+    
+      
+      <div class="post-body markdown-body" id="post-body">
+        <h1 id="一、QEMU虚拟化平台"><a href="#一、QEMU虚拟化平台" class="headerlink" title="一、QEMU虚拟化平台"></a>一、QEMU虚拟化平台</h1><h2 id="1-1-为什推荐QEMU"><a href="#1-1-为什推荐QEMU" class="headerlink" title="1.1 为什推荐QEMU"></a>1.1 为什推荐QEMU</h2><p>在嵌入式与操作系统开发领域，ARM 架构凭借其<strong>高性能</strong>与<strong>低功耗</strong>的显著优势，已成为现代计算设备的核心技术基础——从物联网传感器、智能手机、汽车电子，到数据中心服务器，ARM 无处不在。</p>
+<p>然而，许多开发者在学习 ARM 体系与操作系统开发时会遇到很多问题，第一个拦在面前的障碍往往不是代码本身，而是<strong>开发环境</strong>。翻开任何一本嵌入式书籍，前几章几乎都在教你买板子、接串口、装驱动、配烧录工具。还没碰到一行代码，时间和精力已经耗去大半。</p>
+<p>一块主流的ARM开发板，再加上电源、串口线、SD卡、JTAG调试器……整套下来，还没开始学，钱包先瘦了一圈。对于学生和刚入行的工程师来说，这不是一个可以轻松做出的决定。</p>
+<p>真实开发板当然有它不可替代的价值，但在<strong>源码学习和原理分析</strong>这个阶段，它的短板明显：</p>
+<ul>
+<li><strong>开发板成本高昂</strong>：一块功能完整的 ARM 开发板动辄数百上千元</li>
+<li><strong>调试环境复杂</strong>：需要配置 JTAG 调试器、串口线、电源等一系列硬件</li>
+<li><strong>实验破坏性风险</strong>：误操作可能导致硬件损坏，试错成本极高</li>
+<li><strong>平台绑定性强，环境难以复现和共享</strong>：代码往往与特定开发板深度耦合，难以迁移</li>
+</ul>
+<p>QEMU是一个开源的全系统模拟器，它可以模拟完整的ARM处理器以及外设，让代码以为自己运行在一块真实的硬件上。更重要的是，QEMU内置了GDB调试桩——这意味着你可以<strong>在U-Boot执行第一条指令之前就断下来</strong>，逐条指令单步执行，实时观察每一个寄存器、每一块内存的变化。这种调试深度，即便是价格不菲的JTAG调试器也很难轻松做到。</p>
+<p>QEMU几乎完美地解决了上述所有问题：</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>真实开发板</th>
+<th>QEMU</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>成本</td>
+<td>数百至数千元</td>
+<td>免费</td>
+</tr>
+<tr>
+<td>环境搭建</td>
+<td>串口、电源、烧录工具</td>
+<td>一条命令启动</td>
+</tr>
+<tr>
+<td>编译→运行周期</td>
+<td>分钟级</td>
+<td>秒级</td>
+</tr>
+<tr>
+<td>调试能力</td>
+<td>依赖JTAG，门槛高</td>
+<td>内置GDB Server，直接单步</td>
+</tr>
+<tr>
+<td>环境一致性</td>
+<td>因人而异</td>
+<td>完全可复现</td>
+</tr>
+<tr>
+<td>状态快照</td>
+<td>不支持</td>
+<td>支持存档&#x2F;恢复</td>
+</tr>
+</tbody></table>
+<h1 id="1-2-为什么选择mcimx6ul-evk"><a href="#1-2-为什么选择mcimx6ul-evk" class="headerlink" title="1.2 为什么选择mcimx6ul-evk"></a>1.2 为什么选择mcimx6ul-evk</h1><p>选择<code>mcimx6ul-evk</code>（NXP i.MX6UltraLite EVK）作为QEMU的目标机器，原因有三：</p>
+<ol>
+<li><strong>i.MX6UL资料生态好</strong>。大量中文教程、开发板、培训课程都基于这颗芯片，社区资料丰富，遇到问题容易找到答案。</li>
+<li><strong>QEMU对i.MX6UL的支持相对完善</strong>。与 I.MX6ULL Mini 使用相同的 SoC。CPU核心（Cortex-A7）、中断控制器（GIC）、定时器（GPT&#x2F;EPIT）、UART等关键外设均已建模，足以支撑U-Boot从上电到引导内核的完整流程。</li>
+<li><strong>U-Boot主线对i.MX6UL的支持成熟稳定</strong>。我们可以直接使用U-Boot官方源码，无需依赖厂商私有的BSP补丁，最大程度保证代码的通用性和可读性。</li>
+</ol>
+<h1 id="二、安装QEMU"><a href="#二、安装QEMU" class="headerlink" title="二、安装QEMU"></a>二、安装QEMU</h1><blockquote>
+<p>主机系统：Ubuntu24.04</p>
+<p>QEMU版本：QEMU-10.2.1</p>
+<p>交叉编译工具链：gcc-arm-none-eabi</p>
+<p>调试器（GDB）：GDB是一个强大的调试工具，可以与QEMU配合使用</p>
+</blockquote>
+<h2 id="2-1-使用apt-get命令安装"><a href="#2-1-使用apt-get命令安装" class="headerlink" title="2.1. 使用apt-get命令安装"></a>2.1. 使用apt-get命令安装</h2><p>大多数 Linux 发行版已经为 QEMU（或 KVM）提供了二进制包。Ubuntu可以使用下面命令安装：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">sduo <span class="token function">apt-get</span> <span class="token function">install</span> qemu-system<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>这种方式安装的QEMU版本一般不是最新的，Ubuntu20.04提供的QEMU版本为4.2.1，Ubuntu24.04提供的QEMU版本为8.2.2。</p>
+<p>如果需要更新的版本的话，需要采用下载源码本地编译安装的办法。</p>
+<h3 id="2-2-QEMU源码安装"><a href="#2-2-QEMU源码安装" class="headerlink" title="2.2 QEMU源码安装"></a>2.2 QEMU源码安装</h3><p><strong>（1）下载源码</strong></p>
+<p><a target="_blank" rel="noopener" href="https://www.qemu.org/">QEMU官网</a>下载地址：<a target="_blank" rel="noopener" href="https://www.qemu.org/download/">https://www.qemu.org/download/</a></p>
+<p>qemu所有releases版本下载地址：<a target="_blank" rel="noopener" href="https://download.qemu.org/">https://download.qemu.org/</a></p>
+<p>终端使用命令下载：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">wget</span> https://download.qemu.org/qemu-10.2.1.tar.xz<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>解压命令：<code>tar xvJf qemu-9.2.2.tar.xz [-C 指定路径]</code></p>
+<p>git克隆下载QEMU</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">git</span> clone https://gitlab.com/qemu-project/qemu.git<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p><strong>（2）安装编译依赖</strong><br>参考文档：<a target="_blank" rel="noopener" href="https://wiki.qemu.org/Hosts/Linux">https://wiki.qemu.org/Hosts/Linux</a></p>
+<p>必要依赖：</p>
+<ul>
+<li>git， 版本管理器</li>
+<li>glib2.0-dev，这会自动包含 zlib1g-dev</li>
+<li>libfdt-devel</li>
+<li>Python3 pip、tomli、setuptools 和 wheel</li>
+<li>Flex（词法分析器生成器） Bison（语法分析器生成器）</li>
+</ul>
+<p>对于Ubuntu， 所有必要的额外软件包都可以如下安装：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">sudo</span> <span class="token function">apt</span> update
+<span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> <span class="token function">git</span> build-essential libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev ninja-build python3-pip python3-setuptools python3-tomli python3-wheel bison flex<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>推荐额外依赖：</p>
+<ul>
+<li>git-email，用于发送补丁</li>
+<li>libsdl2-dev （libsdl2-devel），基于 SDL 的图形用户界面需要</li>
+<li>libgtk-3-dev （gtk3-devel），用于简单的 UI 而不是 VNC</li>
+<li>libvte-dev （vte291-devel），用于通过 GTK 接口访问 QEMU 监视器和串行&#x2F;控制台设备</li>
+<li>libcapstone-dev （capstone-devel），用于反汇编 CPU 指令</li>
+</ul>
+<p>上述列表远非完整。为了最大化代码覆盖，应尽可能启用 QEMU 功能。 运行configure时，你应该会看到很多行是“YES”，只有少数几行是“NO”。</p>
+<p>对于Ubuntu， 大多数推荐的额外软件包以实现最大代码覆盖，可以安装如下：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> git-email
+<span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> libaio-dev libbluetooth-dev libcapstone-dev libbrlapi-dev libbz2-dev
+<span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> libcap-ng-dev libcurl4-gnutls-dev libgtk-3-dev
+<span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> libibverbs-dev libjpeg8-dev libncurses5-dev libnuma-dev
+<span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> librbd-dev librdmacm-dev
+<span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> libsasl2-dev libsdl2-dev libseccomp-dev libsnappy-dev libssh-dev
+<span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> libvde-dev libvdeplug-dev libvte-2.91-dev libxen-dev liblzo2-dev
+<span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> valgrind xfslibs-dev libssl-dev
+<span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> libnfs-dev libiscsi-dev<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>注意：</p>
+<p>qemu9.0之后的版本要求： </p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">glib<span class="token operator">>=</span><span class="token number">2.66</span>
+python<span class="token operator">>=</span><span class="token number">3.8</span>
+Ubuntu20.04在不升级glib和python3的情况下可以安装较新的9.0.x版本
+查看glib版本：pkg-config <span class="token parameter variable">--modversion</span> glib-2.0<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><strong>（3）编译</strong></p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token number">1</span>. 进入qemu源码目录
+<span class="token number">2</span>. <span class="token function">mkdir</span> build
+<span class="token number">3</span>. <span class="token builtin class-name">cd</span> build
+<span class="token number">4</span>. <span class="token punctuation">..</span>/configure --target-list<span class="token operator">=</span>arm-softmmu
+<span class="token comment"># --target-list=arm-softmmu 表示只编译 ARM 全系统模拟器，跳过大量不需要的目标(如x86_64,aarch64等)</span>
+<span class="token comment"># 不使用 --target-list，会编译安装各种平台的Qemu模拟器（aarch64，riscv64等）</span>
+<span class="token comment"># 不指定 --prefix，一般会安装到 /usr/local</span>
+<span class="token number">5</span>. <span class="token function">make</span> -j<span class="token variable"><span class="token variable">$(</span>nproc<span class="token variable">)</span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>make完成后，如果不想安装，可以在build路径下使用.&#x2F;qemu-system-arm执行qemu。</p>
+<p>注意：Ubuntu24.04下，使用默认configure，在make时可能会遇到下面错误：</p>
+<pre class="line-numbers language-none"><code class="language-none">...
+during RTL pass: vartrack
+..&#x2F;linux-user&#x2F;linuxload.c: In function ‘memcpy_to_target’:
+..&#x2F;linux-user&#x2F;linuxload.c:24:1: internal compiler error: Segmentation fault
+...
+Please submit a full bug report, with preprocessed source (by using -freport-bug).
+Please include the complete backtrace with any bug report.
+See &lt;file:&#x2F;&#x2F;&#x2F;usr&#x2F;share&#x2F;doc&#x2F;gcc-13&#x2F;README.Bugs&gt; for instructions.
+ninja: build stopped: subcommand failed.
+make: *** [Makefile:170: run-ninja] Error 1<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这是 <strong>GCC 13 自身崩溃了</strong>（Internal Compiler Error，简称 ICE）。Ubuntu 24.04 默认搭载的 <code>gcc-13</code> 在特定优化级别下编译某些代码时会触发这个已知 bug。</p>
+<p>解决方法可以是升级GCC到14；或者最省事的方法是指定目标只编译arm，也不会触发编译sh4eb-linux-user目标报错。</p>
+<p><strong>（4）安装</strong><br>make运行结束后使用以下命令安装：<br><code>sudo make install</code></p>
+<p>检查qemu版本：<br><code>qemu-system-arm --version</code></p>
+<p>查看支持的开发板<br><code>qemu-system-arm -M help</code></p>
+<h2 id="2-3-删除QEMU"><a href="#2-3-删除QEMU" class="headerlink" title="2.3 删除QEMU"></a>2.3 删除QEMU</h2><p>源码编译安装的qemu需要手动卸载：</p>
+<pre class="line-numbers language-none"><code class="language-none">可执行文件默认放在&#x2F;usr&#x2F;local&#x2F;bin 
+库文件默认存放在&#x2F;usr&#x2F;local&#x2F;libexec
+共享文件默认存放在&#x2F;usr&#x2F;local&#x2F;share 
+文档在 &#x2F;usr&#x2F;local&#x2F;share&#x2F;doc&#x2F;qemu&#x2F;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>卸载源码只需将上面四个目录中相关文件或者目录删除</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">sudo</span> <span class="token function">rm</span> <span class="token parameter variable">-rf</span> /usr/local/bin/qemu-* 
+<span class="token function">sudo</span> <span class="token function">rm</span> <span class="token parameter variable">-rf</span> /usr/local/libexec/qemu-bridge-helper 
+<span class="token function">sudo</span> <span class="token function">rm</span> <span class="token parameter variable">-rf</span> /usr/local/share/qemu
+<span class="token function">sudo</span> <span class="token function">rm</span> <span class="token parameter variable">-rf</span> /usr/local/share/doc/qemu<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h1 id="三、交叉编译工具安装"><a href="#三、交叉编译工具安装" class="headerlink" title="三、交叉编译工具安装"></a>三、交叉编译工具安装</h1><p>在一种计算机环境中运行的编译程序，能编译出在另外一种环境下运行的代码，我们就称这种编译器支持交叉编译，这个编译过程就称为交叉编译。</p>
+<p>简单地说，就是在一个平台上生成另一个平台上的可执行代码。这里需要注意的是所谓平台，实际上包含两个概念：体系结构（Architecture）和操作系统（Operating System）。同一个体系结构可以运行不同的操作系统；同样，同一个操作系统也可以在不同的体系结构上运行。</p>
+<p>要进行交叉编译，我们需要在主机平台上安装对应的交叉编译工具链，然后用这个交叉编译工具链编译我们的源代码，最终生成可在目标平台上运行的代码。例如适用于ARM平台的交叉编译工具链arm-linux-gcc（arm-none-eabi-gcc）。</p>
+<h2 id="3-1-apt-get命令安装"><a href="#3-1-apt-get命令安装" class="headerlink" title="3.1 apt-get命令安装"></a>3.1 apt-get命令安装</h2><p>使用 Ubuntu 自带的 apt 工具安装 gcc-arm-none-eabi。</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> gcc-arm-none-eabi<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>安装完成后，输入命令获取版本号。</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">arm-none-eabi-gcc <span class="token parameter variable">--version</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p><strong>为什么选 <code>arm-none-eabi</code> 而不是 <code>arm-linux-gnueabihf</code>？</strong></p>
+<ul>
+<li><code>arm-none-eabi</code>：面向裸机（bare-metal）开发，不依赖任何操作系统的 C 库</li>
+<li><code>arm-linux-gnueabihf</code>：面向 Linux 应用开发，依赖 glibc</li>
+</ul>
+<p>所以做裸机开发，选择前者。</p>
+<p>这种方法安装的工具链不包含arm-none-eabi-gdb调试工具，建议去官网下载手动安装。</p>
+<h2 id="3-2-手动下载安装"><a href="#3-2-手动下载安装" class="headerlink" title="3.2 手动下载安装"></a>3.2 手动下载安装</h2><p>Arm GNU 工具链下载 – Arm 开发者](<a target="_blank" rel="noopener" href="https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads">https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads</a>)<br>下载之后解压到指定目录：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">sudo</span> <span class="token function">mkdir</span> /opt/tool
+<span class="token function">sudo</span> <span class="token function">tar</span> <span class="token parameter variable">-jxf</span> gcc-arm-none-eabi-xxxx-x86_64-linux.tar.bz2 <span class="token parameter variable">-C</span> /opt/tool/<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>添加到环境变量：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token builtin class-name">export</span> <span class="token assign-left variable"><span class="token environment constant">PATH</span></span><span class="token operator">=</span><span class="token environment constant">$PATH</span>:/opt/tool/gcc-arm-none-eabi-xxxx/bin<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+
+<p>命令 “<code>PATH=$PATH:路径</code>”可以把这个路径加入环境变量，但是退出这个命令行窗口就失效了。</p>
+<p>永久有效配置如下：</p>
+<p>在&#x2F;home&#x2F;用户名下&#x2F;.bashrc文件末尾中添加下面的内容：<br><code>export PATH=$PATH:/opt/tool/gcc-arm-none-eabi-xxxx/bin</code>，然后保存。</p>
+<p>最后执行：<code>source .bashrc</code> 使其生效。</p>
+<p>输入命令获取版本号：arm-none-eabi-gcc –version，验证安装成功。</p>
+<h2 id="3-3-gdb调试工具"><a href="#3-3-gdb调试工具" class="headerlink" title="3.3 gdb调试工具"></a>3.3 gdb调试工具</h2><p>我们可以使用工具链自带的gdb来调试代码。</p>
+<p>下面推荐一个好用的gdb工具：gdb-multiarch</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">sudo</span> <span class="token function">apt</span> <span class="token function">install</span> gdb-multiarch<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>使用方法：</p>
+<pre class="line-numbers language-none"><code class="language-none">gdb-multiarch --tui u-boot
+
+(gdb) set architecture arm
+(gdb) target remote localhost:1234<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>至此，开发环境和交叉编译工具链配置等相关准备工作已完成。</p>
+<p>使用下面的命令可以在qemu运行我们的裸机程序：</p>
+<pre class="line-numbers language-none"><code class="language-none">qemu-system-arm -M mcimx6ul-evk -cpu cortex-a7 -m 512M -kernel u-boot<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<hr>
+<p>QEMU 帮我们屏蔽了这些硬件初始化的复杂性，让我们可以<strong>专注于理解核心概念</strong>。等我们对 ARM 体系结构有了足够的理解后，再去攻克这些硬件细节，就会轻松很多。</p>
+
+      </div>
+    
+    
+    
+  </div>
+  
+  
+  
+
+<div class="post-copyright">
+  <div class="copyright-item">
+    <span class="copyright-label">文章作者</span>
+    <span class="copyright-content">
+      
+      <a href="https://uscxi.github.io/" target="_blank" rel="noopener">STUDYWITHIOT</a>
+      
+    </span>
+  </div>
+
+  
+  <div class="copyright-item">
+    <span class="copyright-label">文章链接</span>
+    <span class="copyright-content">
+      <a href="https://uscxi.github.io/2026/03/01/QEMU/ARM%E4%BB%BF%E7%9C%9F%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83_QEMU%E8%99%9A%E6%8B%9F%E5%8C%96%E5%B9%B3%E5%8F%B0%E6%90%AD%E5%BB%BA/">https://uscxi.github.io/2026/03/01/QEMU/ARM仿真开发环境_QEMU虚拟化平台搭建/</a>
+    </span>
+  </div>
+  <div class="copyright-item">
+    <span class="copyright-label">版权声明</span>
+    <span class="copyright-content">
+      本博客所有文章除特别声明外，均采用 
+      <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener">CC BY-NC-SA 4.0</a> 
+      许可协议。转载请注明来自：
+      <a href="https://uscxi.github.io">STUDYWITHIOT</a> ！
+    </span>
+  </div>
+</div>
+
+  
+  
+  <div class="post-meta-bottom">
+    
+    <div class="post-tags">
+      
+        <i class="fas fa-tags"></i>
+        
+          <a href="/tags/ARM/" class="tag-link">#ARM</a>
+        
+          <a href="/tags/QEMU/" class="tag-link">#QEMU</a>
+        
+      
+    </div>
+    
+    
+    
+
+
+<div class="post-share">
+  
+  
+  <a class="share-item weibo" 
+     href="https://service.weibo.com/share/share.php?url=https%3A%2F%2Fuscxi.github.io%2F2026%2F03%2F01%2FQEMU%2FARM%25E4%25BB%25BF%25E7%259C%259F%25E5%25BC%2580%25E5%258F%2591%25E7%258E%25AF%25E5%25A2%2583_QEMU%25E8%2599%259A%25E6%258B%259F%25E5%258C%2596%25E5%25B9%25B3%25E5%258F%25B0%25E6%2590%25AD%25E5%25BB%25BA%2F&title=ARM%E4%BB%BF%E7%9C%9F%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E2%80%94%E2%80%94QEMU%E8%99%9A%E6%8B%9F%E5%8C%96%E5%B9%B3%E5%8F%B0%E6%90%AD%E5%BB%BA"
+     target="_blank" rel="noopener" title="微博">
+    <i class="fab fa-weibo"></i>
+  </a>
+  
+  
+  
+  
+  <a class="share-item qq"
+     href="https://connect.qq.com/widget/shareqq/index.html?url=https%3A%2F%2Fuscxi.github.io%2F2026%2F03%2F01%2FQEMU%2FARM%25E4%25BB%25BF%25E7%259C%259F%25E5%25BC%2580%25E5%258F%2591%25E7%258E%25AF%25E5%25A2%2583_QEMU%25E8%2599%259A%25E6%258B%259F%25E5%258C%2596%25E5%25B9%25B3%25E5%258F%25B0%25E6%2590%25AD%25E5%25BB%25BA%2F&title=ARM%E4%BB%BF%E7%9C%9F%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E2%80%94%E2%80%94QEMU%E8%99%9A%E6%8B%9F%E5%8C%96%E5%B9%B3%E5%8F%B0%E6%90%AD%E5%BB%BA&summary="
+     target="_blank" rel="noopener" title="QQ">
+    <i class="fab fa-qq"></i>
+  </a>
+  
+  
+  
+  
+  <div class="share-item wechat" title="微信">
+    <i class="fab fa-weixin"></i>
+    <div class="wechat-qrcode">
+      <p>微信扫一扫分享</p>
+      <div class="qrcode-img" id="share-wechat-qrcode"></div>
+    </div>
+  </div>
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  <div class="share-item copy-link" id="share-copy-btn" title="复制链接">
+    <i class="fas fa-link"></i>
+  </div>
+  
+</div>
+
+  </div>
+  
+  
+  
+
+
+<div class="post-reward">
+  <div class="reward-wrap">
+    <button class="reward-btn">
+      <i class="fas fa-qrcode"></i>
+      <span>打赏</span>
+    </button>
+    
+    <div class="reward-popup">
+      
+      <div class="reward-text">请作者喝杯茶吧~</div>
+      
+      <div class="reward-qrcodes">
+        
+        <div class="reward-qrcode">
+          <div class="qrcode-box">
+            <img src="/images/wechat-pay.png" alt="微信打赏">
+          </div>
+          <span class="reward-label wechat">
+            <i class="fab fa-weixin"></i> 微信
+          </span>
+        </div>
+        
+        
+        <div class="reward-qrcode">
+          <div class="qrcode-box">
+            <img src="/images/alipay.png" alt="支付宝打赏">
+          </div>
+          <span class="reward-label alipay">
+            <i class="fab fa-alipay"></i> 支付宝
+          </span>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+
+  
+  
+  <nav class="post-nav">
+    
+    <a href="/2026/03/02/ARM/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3UART/" class="prev-post">
+      <i class="fas fa-chevron-left"></i>
+      <span>UART：从零基础到掌握（一）——UART协议</span>
+    </a>
+    
+    
+    <a href="/2026/03/01/ARM/ARM%EF%BC%9A%E4%BB%8E%E8%A3%B8%E6%9C%BA%E5%88%B0%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/" class="next-post">
+      <span>ARM：从裸机到操作系统实现</span>
+      <i class="fas fa-chevron-right"></i>
+    </a>
+    
+  </nav>
+  <!-- 评论系统 -->
+  
+</article>
+
+
+        </div>
+        
+        
+        
+<aside id="sidebar" class="sidebar">
+  <div class="sidebar-inner">
+    
+    <div id="sidebar-info" class="sidebar-content active">
+      
+<div class="card-widget card-info">
+  <div class="card-content">
+    
+    
+    <div class="author-info">
+      <div class="author-avatar">
+        <img src="/images/avatar.png" 
+             alt="STUDYWITHIOT">
+      </div>
+      
+      <div class="author-name">
+        STUDYWITHIOT
+      </div>
+      
+      <div class="author-description">
+        心之何如，有似万丈迷津，遥亘千里，其中并无舟子可以渡人，除了自渡，他人爱莫能助。
+      </div>
+    </div>
+    
+    
+    
+    <div class="site-stats">
+      <a href="/archives/" class="stat-item">
+        <span class="stat-count">44</span>
+        <span class="stat-name">文章</span>
+      </a>
+      <a href="/categories/" class="stat-item">
+        
+        <span class="stat-count">12</span>
+        <span class="stat-name">分类</span>
+      </a>
+      <a href="/tags/" class="stat-item">
+        <span class="stat-count">18</span>
+        <span class="stat-name">标签</span>
+      </a>
+    </div>
+    
+    
+    
+    <div class="social-links">
+      
+      <a href="https://github.com/uscxi" class="social-link" target="_blank" rel="noopener" title="github">
+        <i class="fab fa-github"></i>
+      </a>
+      
+      <a href="mailto:xxiao9969@163.com" class="social-link" target="_blank" rel="noopener" title="email">
+        <i class="fas fa-envelope"></i>
+      </a>
+      
+    </div>
+    
+  </div>
+</div>
+
+      
+      
+
+<div class="card-widget card-announcement">
+  <div class="card-content">
+    
+    <div class="announcement-header">
+      
+      <i class="fas fa-bullhorn"></i>
+      
+      <span class="announcement-title">
+        公告
+      </span>
+    </div>
+    
+    
+    <div class="announcement-content">
+      
+        <p><strong>欢迎来到我的博客！</strong></p>
+<p>关注公众号查看更多技术文章</p>
+<img src="/images/qrcode.png" >
+<p>如果你在访问中遇到问题，可前往公众号进行反馈</p>
+
+      
+    </div>
+    
+    
+    
+    <div class="announcement-link">
+      <a href="/about/" 
+         >
+        了解更多
+        <i class="fas fa-chevron-right"></i>
+      </a>
+    </div>
+    
+  </div>
+</div>
+
+    </div>
+    
+    
+    
+    <div id="sidebar-toc" class="sidebar-content">
+      
+<div class="card-widget card-toc">
+  <div class="card-header">
+    <span class="card-title">
+      <i class="fas fa-list-ul"></i> 目录
+    </span>
+    <span class="toc-progress" id="toc-progress">0%</span>
+  </div>
+  <div class="card-body">
+    <div class="toc-content" id="toc-content">
+      
+        <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%B8%80%E3%80%81QEMU%E8%99%9A%E6%8B%9F%E5%8C%96%E5%B9%B3%E5%8F%B0"><span class="toc-text">一、QEMU虚拟化平台</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-1-%E4%B8%BA%E4%BB%80%E6%8E%A8%E8%8D%90QEMU"><span class="toc-text">1.1 为什推荐QEMU</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#1-2-%E4%B8%BA%E4%BB%80%E4%B9%88%E9%80%89%E6%8B%A9mcimx6ul-evk"><span class="toc-text">1.2 为什么选择mcimx6ul-evk</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E5%AE%89%E8%A3%85QEMU"><span class="toc-text">二、安装QEMU</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#2-1-%E4%BD%BF%E7%94%A8apt-get%E5%91%BD%E4%BB%A4%E5%AE%89%E8%A3%85"><span class="toc-text">2.1. 使用apt-get命令安装</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-QEMU%E6%BA%90%E7%A0%81%E5%AE%89%E8%A3%85"><span class="toc-text">2.2 QEMU源码安装</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-3-%E5%88%A0%E9%99%A4QEMU"><span class="toc-text">2.3 删除QEMU</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E4%BA%A4%E5%8F%89%E7%BC%96%E8%AF%91%E5%B7%A5%E5%85%B7%E5%AE%89%E8%A3%85"><span class="toc-text">三、交叉编译工具安装</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#3-1-apt-get%E5%91%BD%E4%BB%A4%E5%AE%89%E8%A3%85"><span class="toc-text">3.1 apt-get命令安装</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-2-%E6%89%8B%E5%8A%A8%E4%B8%8B%E8%BD%BD%E5%AE%89%E8%A3%85"><span class="toc-text">3.2 手动下载安装</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-3-gdb%E8%B0%83%E8%AF%95%E5%B7%A5%E5%85%B7"><span class="toc-text">3.3 gdb调试工具</span></a></li></ol></li></ol>
+      
+    </div>
+  </div>
+</div>
+    </div>
+    
+  </div>
+</aside>
+      </div>
+    </main>
+    
+    
+    
+<footer id="footer" class="footer">
+  <div class="footer-inner">
+    
+     
+    <div class="footer-copyright">
+      <span>
+        Copyright &copy; 
+        
+          2025 - 
+        
+        2026
+      </span>
+      <span class="footer-author">STUDYWITHIOT</span><span>. All Rights Reserved</span>
+    </div>
+    
+    
+    
+    
+    <div class="footer-powered">
+      <span>Powered by</span>
+      <a href="https://hexo.io" target="_blank" rel="noopener">Hexo</a>
+      <span>|</span>
+      <span>Theme by</span>
+      <a href="https://github.com/uscxi" target="_blank" rel="noopener">uscxi</a>
+    </div>
+    
+  </div>
+</footer>
+  </div>
+  
+  
+  
+
+<div id="rightside" class="rightside">
+  
+  <div id="rightside-top-area" class="rightside-top-area">
+    
+    
+    <button id="toc-toggle" class="rightside-btn" title="目录" data-mode="info">
+      <i class="fas fa-list-ul" id="toc-toggle-icon"></i>
+    </button>
+    
+    
+    
+    <div id="rightside-menus" class="rightside-menus">
+      
+      
+      <button id="hide-sidebar-btn" class="rightside-btn rightside-item" title="隐藏侧边栏">
+        <i class="fas fa-arrows-alt-h"></i>
+      </button>
+      
+      
+      
+      
+      <button id="theme-toggle-btn" class="rightside-btn rightside-item" title="切换主题">
+        <i class="fas fa-adjust"></i>
+      </button>
+      
+    </div>
+  </div>
+  
+  
+  <div id="rightside-bottom-area" class="rightside-bottom-area">
+    
+    <button id="rightside-toggle" class="rightside-btn rightside-toggle" title="更多功能">
+      <i class="fas fa-cog"></i>
+    </button>
+    
+    
+    
+    <button id="go-top" class="rightside-btn rightside-go-top" title="返回顶部">
+      <span class="scroll-percent">0</span>
+      <i class="fas fa-arrow-up"></i>
+    </button>
+    
+  </div>
+</div>
+
+
+  
+  
+
+
+<div id="search-mask" class="search-mask"></div>
+
+
+<div id="search-modal" class="search-modal">
+  <div class="search-dialog">
+    
+    <div class="search-header">
+      <div class="search-input-wrap">
+        <i class="fas fa-search search-icon"></i>
+        <input 
+          type="text" 
+          id="search-input" 
+          class="search-input" 
+          placeholder="搜索文章..."
+          autocomplete="off"
+        >
+        <button id="search-clear" class="search-clear" title="清空">
+          <i class="fas fa-times-circle"></i>
+        </button>
+      </div>
+      <button id="search-close" class="search-close" title="关闭 (ESC)">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    
+    <div class="search-tips">
+      <span><kbd>↑</kbd><kbd>↓</kbd> 导航</span>
+      <span><kbd>Enter</kbd> 打开</span>
+      <span><kbd>ESC</kbd> 关闭</span>
+    </div>
+    
+    
+    <div id="search-results" class="search-results">
+      <div class="search-init">
+        <i class="fas fa-search"></i>
+        <p>输入关键词开始搜索</p>
+      </div>
+    </div>
+    
+    
+    <div id="search-stats" class="search-stats"></div>
+  </div>
+</div>
+
+
+  
+  <script src="/js/main.js"></script>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/rightside.js"></script>
+
+  
+  <script src="/js/search.js"></script>
+  
+  
+  
+  
+    
+    <script src="/js/prism/prism.js"></script>
+    
+    <script src="/js/toc.js"></script>
+    
+    
+    <script src="/js/post-actions.js"></script>
+    
+    
+  
+</body>
+</html>

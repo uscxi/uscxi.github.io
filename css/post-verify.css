@@ -1,0 +1,437 @@
+/* themes/uscxi/source/css/post-verify.css */
+
+/* ==========================================
+   阅读验证 - 变量
+   ========================================== */
+:root {
+  --verify-primary: #07c160;
+  --verify-primary-hover: #06ad56;
+  --verify-danger: #e74c3c;
+  --verify-modal-bg: var(--card-bg);
+  --verify-overlay-bg: rgba(0, 0, 0, 0.7);
+  --verify-mask-height: 300px;
+}
+
+[data-theme="dark"] {
+  --verify-primary: #1aad19;
+  --verify-primary-hover: #129611;
+}
+
+/* ==========================================
+   文章内容遮罩
+   ========================================== */
+.post-body-wrap {
+  position: relative;
+}
+
+.post-body-wrap.need-verify {
+  max-height: var(--verify-mask-height);
+  overflow: hidden;
+}
+
+.post-body-wrap.need-verify.verified {
+  max-height: none;
+  overflow: visible;
+}
+
+/* 遮罩层 */
+.read-verify-mask {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 250px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.post-body-wrap.verified .read-verify-mask {
+  display: none;
+}
+
+/* 渐变遮罩 */
+.verify-mask-gradient {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(255, 255, 255, 0.5) 20%,
+    rgba(255, 255, 255, 0.9) 50%,
+    var(--card-bg) 80%
+  );
+}
+
+[data-theme="dark"] .verify-mask-gradient {
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(22, 27, 34, 0.5) 20%,
+    rgba(22, 27, 34, 0.9) 50%,
+    var(--card-bg) 80%
+  );
+}
+
+/* 遮罩内容 */
+.verify-mask-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 30px 20px 20px;
+  pointer-events: auto;
+}
+
+.verify-lock-icon {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--verify-primary), var(--verify-primary-hover));
+  border-radius: 50%;
+  color: #fff;
+  font-size: 1.5rem;
+  margin-bottom: 15px;
+  box-shadow: 0 4px 15px rgba(7, 193, 96, 0.3);
+}
+
+.verify-mask-text {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin-bottom: 20px;
+}
+
+.verify-show-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 30px;
+  background: linear-gradient(135deg, var(--verify-primary), var(--verify-primary-hover));
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 4px 15px rgba(7, 193, 96, 0.3);
+}
+
+.verify-show-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(7, 193, 96, 0.4);
+}
+
+.verify-show-btn:active {
+  transform: translateY(0);
+}
+
+/* ==========================================
+   验证弹窗
+   ========================================== */
+.verify-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--verify-overlay-bg);
+  backdrop-filter: blur(5px);
+  z-index: 2100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.verify-modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.verify-modal {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  background: var(--verify-modal-bg);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  transform: translateY(-20px) scale(0.95);
+  transition: transform 0.3s ease;
+  overflow: hidden;
+}
+
+.verify-modal-overlay.active .verify-modal {
+  transform: translateY(0) scale(1);
+}
+
+/* 关闭按钮 */
+.verify-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-color);
+  border: none;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  z-index: 10;
+}
+
+.verify-modal-close:hover {
+  background: var(--verify-danger);
+  color: #fff;
+  transform: rotate(90deg);
+}
+
+/* 弹窗内容 */
+.verify-modal-content {
+  padding: 30px 25px;
+}
+
+/* 标题 */
+.verify-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 25px;
+}
+
+.verify-modal-header i {
+  font-size: 1.5rem;
+  color: var(--verify-primary);
+}
+
+.verify-modal-header h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* 二维码 */
+.verify-qrcode-wrap {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.verify-qrcode {
+  width: 180px;
+  height: 180px;
+  margin: 0 auto 12px;
+  padding: 10px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.verify-qrcode img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.verify-wechat-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--verify-primary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.verify-wechat-name i {
+  font-size: 1rem;
+}
+
+/* 提示文字 */
+.verify-tips {
+  text-align: center;
+  margin-bottom: 20px;
+  padding: 12px 15px;
+  background: var(--primary-light);
+  border-radius: 8px;
+}
+
+.verify-tips p {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* 验证码输入 */
+.verify-input-wrap {
+  margin-bottom: 15px;
+}
+
+.verify-input-group {
+  display: flex;
+  gap: 10px;
+}
+
+.verify-input {
+  flex: 1;
+  height: 46px;
+  padding: 0 16px;
+  background: var(--bg-color);
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  font-size: 1rem;
+  color: var(--text-primary);
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.verify-input:focus {
+  border-color: var(--verify-primary);
+  box-shadow: 0 0 0 3px rgba(7, 193, 96, 0.15);
+}
+
+.verify-input::placeholder {
+  color: var(--text-muted);
+}
+
+.verify-submit-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 20px;
+  height: 46px;
+  background: var(--verify-primary);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.verify-submit-btn:hover {
+  background: var(--verify-primary-hover);
+}
+
+.verify-submit-btn:active {
+  transform: scale(0.98);
+}
+
+.verify-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 错误提示 */
+.verify-error {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  color: var(--verify-danger);
+  text-align: center;
+  min-height: 20px;
+}
+
+/* 底部说明 */
+.verify-footer {
+  text-align: center;
+  padding-top: 15px;
+  border-top: 1px dashed var(--border-color);
+}
+
+.verify-footer p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* ==========================================
+   验证成功动画
+   ========================================== */
+.verify-success-animation {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--verify-overlay-bg);
+  z-index: 2200;
+  animation: fadeIn 0.3s ease;
+}
+
+.verify-success-icon {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--verify-primary);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 2.5rem;
+  animation: successPop 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes successPop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ==========================================
+   响应式
+   ========================================== */
+@media screen and (max-width: 480px) {
+  .verify-modal-content {
+    padding: 25px 20px;
+  }
+  
+  .verify-qrcode {
+    width: 160px;
+    height: 160px;
+  }
+  
+  .verify-input-group {
+    flex-direction: column;
+  }
+  
+  .verify-submit-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .verify-show-btn {
+    padding: 11px 25px;
+    font-size: 0.95rem;
+  }
+}
